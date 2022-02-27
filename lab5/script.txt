@@ -1,0 +1,15 @@
+show
+add
+Titanic
+23.1
+-862
+2
+HORROR
+g
+Clown
+87.1
+red
+25.1
+96.4
+Russia
+show
