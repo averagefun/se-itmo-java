@@ -57,17 +57,16 @@ public class CommandManager {
             Command command = getCommand(name);
             if (command == null) throw new CommandNotFindException("Command not find.");
             getCommand(name).run(arg);
-        } catch (InvalidArgumentException e) {
+        } catch (NullPointerException e) {
+            Console.println("Command did not run successfully, problem detected.");
+        }
+        catch (InvalidArgumentException e) {
             if (e.getMessage() != null) Console.println(e.getMessage());
         } catch (ExecuteScriptFailedException|CommandNotFindException e) {
             Console.println(e.getMessage());
         } catch (IOException e) {
             Console.println("Error: file not found.");
         }
-    }
-
-    public Map<String, Command> getCommands() {
-        return commands;
     }
 
     @Override
@@ -102,7 +101,6 @@ public class CommandManager {
                 if (obj == null) throw new InvalidArgumentException();
                 int id = (int) obj;
                 Movie m = mc.getMovieById(id);
-                if (m == null) throw new InvalidArgumentException("Film with id " + id + " not found.");
 
                 // Format creating date
                 final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd.MMMM.yyyy", Locale.US);
@@ -149,11 +147,15 @@ public class CommandManager {
         });
 
         putCommand("save", "save collection to file", (arg) -> {
-            try {
-                fm.writeToJsonFile("db.json", mc);
-                Console.println("Successfully saved to file!", printMode);
-            } catch (FileNotFoundException e) {
-                Console.println("Error: saving file not found.", printMode);
+            if (mc.getStartFilePath() != null) {
+                try {
+                    fm.writeToJsonFile(mc.getStartFilePath(), mc);
+                    Console.println("Successfully saved to file!", printMode);
+                } catch (FileNotFoundException e) {
+                    Console.println("Error: saving file not found.", printMode);
+                }
+            } else {
+                Console.println("Error: saving file not specified.", printMode);
             }
         });
 
@@ -233,7 +235,7 @@ public class CommandManager {
                 Console.println("Films with less oscars was not found.");
             } else {
                 Console.println("ID OSCARS NAME");
-                subCollection.forEach(movie -> System.out.printf(Locale.US, "%2d %6d %s", movie.getId(), movie.getOscarsCount(), movie.getName()));
+                subCollection.forEach(movie -> System.out.printf(Locale.US, "%2d %6d %s\n", movie.getId(), movie.getOscarsCount(), movie.getName()));
             }
         });
 
@@ -251,7 +253,7 @@ public class CommandManager {
                 Console.println("Films with greater directors was not found.");
             } else {
                 Console.println("ID DIRECTOR NAME");
-                subCollection.forEach(movie -> System.out.printf(Locale.US, "%2d %8.2f %s", movie.getId(), movie.getDirector().getWeight(), movie.getName()));
+                subCollection.forEach(movie -> System.out.printf(Locale.US, "%2d %8.2f %s\n", movie.getId(), movie.getDirector().getWeight(), movie.getName()));
             }
         });
 
@@ -263,7 +265,7 @@ public class CommandManager {
                 Console.println("Collection is empty, so no unique oscars.");
             } else {
                 Console.println("All unique oscars count values (total " + uniqOscar.size() + "):");
-                uniqOscar.forEach(Console::print);
+                uniqOscar.forEach(Console::printWithSpace);
                 Console.println();
             }
         });

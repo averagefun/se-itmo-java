@@ -33,6 +33,10 @@ public class Console {
         System.out.print(printable);
     }
 
+    public static void printWithSpace(Object printable){
+        System.out.print(printable + " ");
+    }
+
     public static void println(){
         System.out.println();
     }

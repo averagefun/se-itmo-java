@@ -7,13 +7,20 @@ import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) {
-        // Lab5, variant
+        // Lab5, variant 3117500
 
         printLogo();
         Scanner sc = new Scanner(System.in);
 
         FileManager fm = new FileManager();
-        MovieCollection mc = new MovieCollection(fm, "db.json");
+
+        MovieCollection mc;
+        if (args.length >= 1) {
+            mc = new MovieCollection(fm, args[0]);
+        } else {
+            mc = new MovieCollection(fm);
+        }
+
         CommandManager cmm = new CommandManager(sc, mc, fm);
 
         Console.println("Type 'help' for display commands list.");

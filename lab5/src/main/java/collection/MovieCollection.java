@@ -2,6 +2,7 @@ package collection;
 
 import console.Console;
 import console.FileManager;
+import exceptions.InvalidArgumentException;
 
 import java.io.IOException;
 import java.time.LocalDate;
@@ -12,10 +13,16 @@ import java.util.stream.Collectors;
 public class MovieCollection {
     private PriorityQueue<Movie> pq;
     private final java.time.LocalDate initDate;
+    private String startFilePath;
 
-    public MovieCollection(FileManager fm, String startFilePath) {
+    public MovieCollection(FileManager fm) {
         this.pq = new PriorityQueue<>();
         this.initDate = LocalDate.now();
+        this.startFilePath = null;
+    }
+
+    public MovieCollection(FileManager fm, String startFilePath) {
+        this(fm);
 
         // initialize values from start file
         try {
@@ -25,9 +32,9 @@ public class MovieCollection {
                             .orElse(new Movie())
                             .getId();
             Movie.setCounter(maxId);
+            this.startFilePath = startFilePath;
             Console.println("-> Collection with " + pq.size() + " movies was loaded from file '" + startFilePath + "'");
-
-        } catch (IOException ignored) {
+        } catch (IOException e) {
             Console.println("-> Program couldn't find json file to load the collection:(");
         }
     }
@@ -40,11 +47,15 @@ public class MovieCollection {
         return pq;
     }
 
-    public Movie getMovieById(int id) {
+    public String getStartFilePath() {
+        return startFilePath;
+    }
+
+    public Movie getMovieById(int id) throws InvalidArgumentException {
         return pq.stream()
                 .filter(movie -> movie.getId() == id)
                 .findFirst()
-                .orElse(null);
+                .orElseThrow(() -> new InvalidArgumentException("Film with id " + id + " not found."));
     }
 
     public Movie getLowest() {
@@ -65,20 +76,20 @@ public class MovieCollection {
         return oldSize != pq.size();
     }
 
-    public boolean removeGreater(int id) {
+    public boolean removeGreater(int id) throws InvalidArgumentException {
         Movie m = getMovieById(id);
         int oldSize = pq.size();
         pq = pq.stream()
-                .filter(movie -> movie.compareTo(m) < 0)
+                .filter(movie -> movie.compareTo(m) <= 0)
                 .collect(Collectors.toCollection(PriorityQueue<Movie>::new));
         return oldSize != pq.size();
     }
 
-    public boolean removeLower(int id) {
+    public boolean removeLower(int id) throws InvalidArgumentException {
         Movie m = getMovieById(id);
         int oldSize = pq.size();
         pq = pq.stream()
-                .filter(movie -> movie.compareTo(m) > 0)
+                .filter(movie -> movie.compareTo(m) >= 0)
                 .collect(Collectors.toCollection(PriorityQueue<Movie>::new));
         return oldSize != pq.size();
     }

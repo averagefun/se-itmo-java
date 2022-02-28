@@ -88,7 +88,7 @@ public class Movie implements Comparable<Movie> {
 
     @Override
     public int compareTo(Movie o) {
-        return Integer.compare(getOscarsCount(), o.getOscarsCount());
+        return Integer.compare(getId(), o.getId());
     }
 
     @Override
