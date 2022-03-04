@@ -18,6 +18,9 @@ import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+/**
+ * Class that operates Command
+ */
 public class CommandManager {
     private final Map<String, Command> commands;
     private final Map<String, String> descriptions;
@@ -43,15 +46,31 @@ public class CommandManager {
         initCommands();
     }
 
+    /**
+     * Add new command
+     * @param name name of command that used to execute command
+     * @param description description of command showed in help mode
+     * @param action what this command going to do (action of command)
+     */
     public void putCommand(String name, String description, Command action){
         commands.put(name, action);
         descriptions.put(name, description);
     }
 
+    /**
+     * Get command by name
+     * @param name the name of command that defined in {@link #putCommand(String, String, Command)}
+     * @return Command
+     */
     public Command getCommand(String name) {
         return commands.get(name);
     }
 
+    /**
+     * Run command by name defined in {@link #putCommand(String, String, Command)}
+     * @param name command name
+     * @param arg argument, given to command
+     */
     public void runCommand(String name, String arg) {
         try {
             Command command = getCommand(name);
@@ -69,6 +88,14 @@ public class CommandManager {
         }
     }
 
+    /**
+     * Run command with no argument
+     * @param name command name
+     */
+    public void runCommand(String name) {
+        runCommand(name, null);
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder("Here is command list:\n*");
@@ -78,12 +105,12 @@ public class CommandManager {
         return sb.substring(0,sb.length()-2);
     }
 
-    public void setPrintMode() {
+    private void setPrintMode() {
         this.printMode = true;
         this.valueGetter = sc::nextLine;
     }
 
-    public void offPrintMode(Queue<String> q) {
+    private void offPrintMode(Queue<String> q) {
         this.printMode = false;
         valueGetter = q::poll;
     }
@@ -97,7 +124,7 @@ public class CommandManager {
             if (arg == null) Console.println(mc);
             else {
                 Object obj = new InputValidator(int.class, false, 0, Double.MAX_VALUE)
-                        .validate(arg, true);
+                        .validate(arg, null, true);
                 if (obj == null) throw new InvalidArgumentException();
                 int id = (int) obj;
                 Movie m = mc.getMovieById(id);
@@ -116,26 +143,26 @@ public class CommandManager {
 
         putCommand("add", "add movie to collection", (arg) -> {
             Console.println("To add movie lead the instruction below:", printMode);
-            Movie movie = inputAndUpdateMovie(false, null);
+            Movie movie = MovieCollection.inputAndUpdateMovie(false, null, printMode, valueGetter);
             mc.addMovie(movie);
             Console.println("Successfully added element!", printMode);
         });
 
         putCommand("update", "argument -> {id}, update movie by id", (arg) -> {
             Object obj = new InputValidator(int.class, false, 0, Double.MAX_VALUE)
-                    .validate(arg, true);
+                    .validate(arg, null, true);
             if (obj == null) throw new InvalidArgumentException();
             int id = (int) obj;
             Movie oldMovie = mc.getMovieById(id);
             if (oldMovie == null) throw new InvalidArgumentException("Film with id " + id + " not found.");
             Console.println("To update movie lead the instruction below, to save previous value type '<':", printMode);
-            inputAndUpdateMovie(true, oldMovie);
+            MovieCollection.inputAndUpdateMovie(true, oldMovie, printMode, valueGetter);
             Console.println("Successfully updated element!", printMode);
         });
 
         putCommand("remove_by_id", "argument -> {id}, remove movie by id", (arg) -> {
             Object obj = new InputValidator(int.class, false, 0, Double.MAX_VALUE)
-                                .validate(arg, true);
+                                .validate(arg, null, true);
             if (obj == null) throw new InvalidArgumentException();
             int id = (int) obj;
             Console.println((mc.removeMovieById(id)) ? "Movie successfully deleted!" : "Movie with current id doesn't exist.", printMode);
@@ -162,7 +189,7 @@ public class CommandManager {
         putCommand("execute_script", "argument -> {file_name}, execute script file", (arg) -> {
 
             Object obj = new InputValidator(String.class, false)
-                                .validate(arg, true);
+                                .validate(arg, null, true);
             if (obj == null) throw new InvalidArgumentException();
             String filePath = (String) obj;
 
@@ -197,8 +224,8 @@ public class CommandManager {
         });
 
         putCommand("add_if_min", "add movie if it oscars count lower that the other collection", (arg) -> {
-            Movie movie = inputAndUpdateMovie(false, null);
-            if (movie.compareTo(mc.getLowest()) < 0) {
+            Movie movie = MovieCollection.inputAndUpdateMovie(false, null, printMode, valueGetter);
+            if (movie.compareTo(mc.getLowestByOscars()) < 0) {
                 mc.addMovie(movie);
                 Console.println("Successfully added element!", printMode);
             } else {
@@ -208,7 +235,7 @@ public class CommandManager {
 
         putCommand("remove_greater", "argument -> {id}, remove from collection all movies if its oscars count greater than current movie", (arg) -> {
             Object obj = new InputValidator(int.class, false, 0, Double.MAX_VALUE)
-                    .validate(arg, false);
+                    .validate(arg, null, false);
             if (obj == null) throw new InvalidArgumentException();
             int id = (int) obj;
             Console.println((mc.removeGreater(id)) ? "Greater movies successfully deleted!" : "There are no movies greater than this.", printMode);
@@ -216,7 +243,7 @@ public class CommandManager {
 
         putCommand("remove_lower", "argument -> {id}, remove from collection all movies if its oscars count lower than current movie", (arg) -> {
             Object obj = new InputValidator(int.class, false, 0, Double.MAX_VALUE)
-                    .validate(arg, false);
+                    .validate(arg, null, false);
             if (obj == null) throw new InvalidArgumentException();
             int id = (int) obj;
             Console.println((mc.removeLower(id)) ? "Greater movies successfully deleted!" : "There are no movies lower than this.", printMode);
@@ -224,7 +251,7 @@ public class CommandManager {
 
         putCommand("filter_less_than_oscars_count", "argument -> {oscarsCount}, display all movies where oscars count lower than current", (arg) -> {
             Object obj = new InputValidator(int.class, false, 0, Double.MAX_VALUE)
-                    .validate(arg, false);
+                    .validate(arg, null, false);
             if (obj == null) throw new InvalidArgumentException();
             int oscarsCount = (int) obj;
             List<Movie> subCollection = mc.getPQ().stream()
@@ -241,7 +268,7 @@ public class CommandManager {
 
         putCommand("filter_greater_than_director", "argument -> {id}, display all movies where director greater than current", (arg) -> {
             Object obj = new InputValidator(int.class, false, 0, Double.MAX_VALUE)
-                    .validate(arg, false);
+                    .validate(arg, null, false);
             if (obj == null) throw new InvalidArgumentException();
             int id = (int) obj;
             Person d = mc.getMovieById(id).getDirector();
@@ -269,67 +296,5 @@ public class CommandManager {
                 Console.println();
             }
         });
-    }
-
-    private Movie inputAndUpdateMovie(boolean updMode, Movie movie) throws ExecuteScriptFailedException {
-        String name = (String) new InputValidator(String.class, false)
-                .loadPreviousValue(updMode, updMode ? movie.getName() : null)
-                .interactiveInput("movie name", printMode, valueGetter);
-
-        Console.println("Type coordinates:", printMode);
-        Float x = (Float) new InputValidator(Float.class, false)
-                .loadPreviousValue(updMode, updMode ? movie.getCoordinates().getX() : null)
-                .interactiveInput("x (float)", printMode, valueGetter);
-
-        long y = (long) new InputValidator(long.class, false, -863, Double.MAX_VALUE)
-                .loadPreviousValue(updMode, updMode ? movie.getCoordinates().getY() : null)
-                .interactiveInput("y (long > -863)", printMode, valueGetter);
-        Coordinates coordinates = new Coordinates(x,y);
-
-        int oscarsCount = (int) new InputValidator(int.class, false, 0, Integer.MAX_VALUE)
-                .loadPreviousValue(updMode, updMode ? movie.getOscarsCount() : null)
-                .interactiveInput("the number of Oscars", printMode, valueGetter);
-
-        MovieGenre movieGenre = (MovieGenre) new InputValidator(MovieGenre.class, true)
-                .loadPreviousValue(updMode, updMode ? movie.getMovieGenre() : null)
-                .interactiveInput("genre", MovieGenre.values(), printMode, valueGetter);
-        MpaaRating mpaaRating = (MpaaRating) new InputValidator(MpaaRating.class, true)
-                .loadPreviousValue(updMode, updMode ? movie.getMpaaRating() : null)
-                .interactiveInput("mpaaRating", MpaaRating.values(), printMode, valueGetter);
-
-        Console.println("Type director data:", printMode);
-        String directorName = (String) new InputValidator(String.class, false)
-                .loadPreviousValue(updMode, updMode ? movie.getDirector().getName() : null)
-                .interactiveInput("director name", printMode, valueGetter);
-
-        double directorWeight = (double) new InputValidator(double.class, false, 0, Double.MAX_VALUE)
-                .loadPreviousValue(updMode, updMode ? movie.getDirector().getWeight() : null)
-                .interactiveInput("director weight (double)", printMode, valueGetter);
-
-        Color hairColor = (Color) new InputValidator(Color.class, false)
-                .loadPreviousValue(updMode, updMode ? movie.getDirector().getHairColor() : null)
-                .interactiveInput("hair color", Color.values(), printMode, valueGetter);
-
-        Double locationX = (Double) new InputValidator(Double.class, false)
-                .loadPreviousValue(updMode, updMode ? movie.getDirector().getLocation().getX() : null)
-                .interactiveInput("location X (double)", printMode, valueGetter);
-
-        double locationY = (double) new InputValidator(double.class, false)
-                .loadPreviousValue(updMode, updMode ? movie.getDirector().getLocation().getY() : null)
-                .interactiveInput("location Y (double)", printMode, valueGetter);
-
-        String locationName = (String) new InputValidator(String.class, true)
-                .loadPreviousValue(updMode, updMode ? movie.getDirector().getLocation().getName() : null)
-                .interactiveInput("location name", printMode, valueGetter);
-
-        Location location = new Location(locationX, locationY, locationName);
-        Person director = new Person(directorName, directorWeight, hairColor, location);
-
-        if (updMode) {
-            movie.updateMovie(name, coordinates, oscarsCount, movieGenre, mpaaRating, director);
-        } else {
-            movie = new Movie(name, coordinates, oscarsCount, movieGenre, mpaaRating, director);
-        }
-        return movie;
     }
 }

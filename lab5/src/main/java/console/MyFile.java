@@ -4,6 +4,10 @@ import org.jetbrains.annotations.NotNull;
 import java.io.File;
 import java.io.IOException;
 
+/**
+ * Class represents File.
+ * Main key is 2 MyFiles equals if their canonical path equals.
+ */
 public class MyFile extends File {
     private final String canonicalPath;
 

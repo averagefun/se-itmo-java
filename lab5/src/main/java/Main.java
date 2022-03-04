@@ -18,7 +18,7 @@ public class Main {
         if (args.length >= 1) {
             mc = new MovieCollection(fm, args[0]);
         } else {
-            mc = new MovieCollection(fm);
+            mc = new MovieCollection();
         }
 
         CommandManager cmm = new CommandManager(sc, mc, fm);

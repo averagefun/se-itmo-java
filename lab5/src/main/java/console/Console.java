@@ -1,8 +1,13 @@
 package console;
 
 import commands.CommandManager;
+
+import java.util.NoSuchElementException;
 import java.util.Scanner;
 
+/**
+ * Class represent console, that produce interactive input/output with user
+ */
 public class Console {
     public final Scanner sc;
     private final CommandManager cm;
@@ -12,11 +17,19 @@ public class Console {
         this.cm = cm;
     }
 
+    /**
+     * Cycle, that listen user input before exit from program
+     */
     public void interactiveMode() {
         //noinspection InfiniteLoopStatement
         while (true) {
             Console.print("$ ");
-            String[] input = sc.nextLine().trim().split(" ");
+            String[] input = {};
+            try {
+                input = sc.nextLine().trim().split(" ");
+            } catch (NoSuchElementException e) {
+                cm.runCommand("exit");
+            }
             String command = null;
             String arg = null;
             if (input.length >= 1) {

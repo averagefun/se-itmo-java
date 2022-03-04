@@ -11,6 +11,9 @@ import exceptions.InvalidRangeException;
 import java.time.LocalDate;
 import java.util.Locale;
 
+/**
+ * Class represent movie (film) that storage in MovieCollection.
+ */
 public class Movie implements Comparable<Movie> {
     private static int counter = 0;
     private final int id;
@@ -49,6 +52,10 @@ public class Movie implements Comparable<Movie> {
         this.director = director;
     }
 
+    /**
+     * Set counter of all Movie instances
+     * @param c must be larger than previous because of unique
+     */
     public static void setCounter(int c){
         if (c < counter) throw new InvalidRangeException("New counter must be bigger than previous!");
         counter = c;
@@ -86,9 +93,14 @@ public class Movie implements Comparable<Movie> {
         return director;
     }
 
+    /**
+     * Compare with another movie by id
+     * @param m movie to compare
+     * @return -1(lower m), 0(equal m), 1(greater m)
+     */
     @Override
-    public int compareTo(Movie o) {
-        return Integer.compare(getId(), o.getId());
+    public int compareTo(Movie m) {
+        return Integer.compare(getId(), m.getId());
     }
 
     @Override

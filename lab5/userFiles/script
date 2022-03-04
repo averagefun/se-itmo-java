@@ -13,5 +13,4 @@ red
 96.4
 Russia
 show
-execute_script ./script.txt
-exit
+save

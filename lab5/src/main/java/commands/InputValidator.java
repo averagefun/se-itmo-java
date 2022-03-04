@@ -1,6 +1,7 @@
 package commands;
 
 import exceptions.ExecuteScriptFailedException;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import console.Console;
 import data.Color;
@@ -11,8 +12,12 @@ import exceptions.InvalidEnumEntryException;
 import exceptions.InvalidRangeException;
 
 import java.util.Arrays;
+import java.util.NoSuchElementException;
 import java.util.function.Supplier;
 
+/**
+ * Class represent validator, that validate user input by type, format, range
+ */
 public class InputValidator {
     private final Class<?> cl;
     private final Boolean canBeNull;
@@ -33,6 +38,13 @@ public class InputValidator {
         this(cl, canBeNull, Integer.MIN_VALUE, Integer.MAX_VALUE);
     }
 
+    /**
+     * Method load previous field value to memory in case of update (no add) mode.
+     * Then in update mode user can see previous field value.
+     * @param updateMode updateMode (no add)
+     * @param prevValue previous field value
+     * @return this object
+     */
     public InputValidator loadPreviousValue(boolean updateMode, @Nullable Object prevValue) {
         if (updateMode) {
             this.updateMode = true;
@@ -41,6 +53,15 @@ public class InputValidator {
         return this;
     }
 
+    /**
+     * Method produce interactive input of current field.
+     * @param text name of field that shows to user
+     * @param printMode onn/off hint to users (only need in console mode, no need in execute_file mode)
+     * @param valueGetter supplier, that get input field value from different streams (Scanner, File)
+     * @return Object, cast to specified type
+     * @throws ExecuteScriptFailedException exception show validate error while execute_script
+     */
+    @NotNull
     public Object interactiveInput(String text, boolean printMode, Supplier<String> valueGetter) throws ExecuteScriptFailedException {
         if (printMode) {
             String strInsert = "";
@@ -49,35 +70,67 @@ public class InputValidator {
             }
             while (true) {
                 Console.print("Type " + text + strInsert + " >>> ");
-                String input = valueGetter.get();
+                String input = "";
+                try {
+                    input = valueGetter.get();
+                } catch (NoSuchElementException e) {
+                    Console.println("Bye!");
+                    System.exit(0);
+                }
                 if (prevValue != null && input.equals("<")) return prevValue;
-                Object obj = validate(input, false);
+                Object obj = validate(input, null, false);
                 if (obj != null) return obj;
             }
         } else {
             String input = valueGetter.get();
+            Object obj;
             if (prevValue != null && input.equals("<")) return prevValue;
-            Object obj = validate(input, false);
+            else if (input.equals("#validate_initial")) {
+                obj = validate((prevValue != null) ? prevValue.toString() : null,
+                        text.substring(0,1).toUpperCase() + text.substring(1) + ": ",
+                        false);
+            } else {
+                obj = validate(input, null, false);
+            }
             if (obj == null) throw new ExecuteScriptFailedException();
             return obj;
         }
     }
 
+    /**
+     * Method produce interactive input of current enum field.
+     * It's also show users all available enum values.
+     * @param text name of field that show to user
+     * @param enumValues enum values
+     * @param printMode onn/off hint to users (only need in console mode, no need in execute_file mode)
+     * @param valueGetter supplier, that get input field value from different streams (Scanner, File)
+     * @param <T> enum class
+     * @return Object, cast to specified type
+     * @throws ExecuteScriptFailedException exception show validate error while execute_script
+     */
     public <T extends Enum<T>> Object interactiveInput(String text, T[] enumValues, boolean printMode, Supplier<String> valueGetter) throws ExecuteScriptFailedException {
         String textNew = text + " " + Arrays.asList(enumValues);
         return interactiveInput(textNew, printMode, valueGetter);
     }
 
-    public Object validate(String input, Boolean arg) {
+    /**
+     * Validate input value by type and range
+     * @return Object, cast to specified type
+     */
+    public Object validate(String input, String fieldName, Boolean arg) {
+        if (fieldName == null) fieldName = "";
         try {
-            if (!canBeNull && (input==null || input.isEmpty())) {
+            if (!canBeNull && (input==null || input.trim().isEmpty())) {
                 throw new EmptyEntryException();
             }
+
+            input = input.trim();
 
             if (cl == String.class) {
                 return input;
 
             } else if (cl == MovieGenre.class) {
+                if (input.isEmpty()) return null;
                 MovieGenre mg = MovieGenre.checkElement(input);
                 if (mg != null) return mg;
                 throw new InvalidEnumEntryException();
@@ -110,14 +163,14 @@ public class InputValidator {
             }
 
         } catch (EmptyEntryException e) {
-            Console.println(arg ? "Error: No argument find." : "Field can't be empty.");
+            Console.println(arg ? "Error: No argument find." : fieldName + "Field can't be empty.");
         } catch (InvalidEnumEntryException e) {
-            Console.println(arg ? "Argument not one of shown constants." : "Input value not one of shown constants.");
+            Console.println(arg ? "Argument not one of shown constants." : fieldName + "Input value not one of shown constants.");
         }
         catch (NumberFormatException e) {
-            Console.println(arg ? "Argument has wrong number format!" : "Invalid number format.");
+            Console.println(arg ? "Argument has wrong number format!" : fieldName + "Invalid number format.");
         } catch (InvalidRangeException e) {
-            Console.println(arg ? "Argument has wrong number range!" : "Invalid number range.");
+            Console.println(arg ? "Argument has wrong number range!" : fieldName + "Invalid number range.");
         }
         return null;
     }
