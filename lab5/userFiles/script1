@@ -12,5 +12,5 @@ red
 25.1
 96.4
 Russia
-show
 save
+execute_script userFiles/script2

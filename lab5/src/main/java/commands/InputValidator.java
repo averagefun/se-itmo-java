@@ -1,15 +1,11 @@
 package commands;
 
-import exceptions.ExecuteScriptFailedException;
-import org.jetbrains.annotations.NotNull;
+import exceptions.*;
 import org.jetbrains.annotations.Nullable;
 import console.Console;
 import data.Color;
 import data.MovieGenre;
 import data.MpaaRating;
-import exceptions.EmptyEntryException;
-import exceptions.InvalidEnumEntryException;
-import exceptions.InvalidRangeException;
 
 import java.util.Arrays;
 import java.util.NoSuchElementException;
@@ -61,7 +57,6 @@ public class InputValidator {
      * @return Object, cast to specified type
      * @throws ExecuteScriptFailedException exception show validate error while execute_script
      */
-    @NotNull
     public Object interactiveInput(String text, boolean printMode, Supplier<String> valueGetter) throws ExecuteScriptFailedException {
         if (printMode) {
             String strInsert = "";
@@ -78,22 +73,28 @@ public class InputValidator {
                     System.exit(0);
                 }
                 if (prevValue != null && input.equals("<")) return prevValue;
-                Object obj = validate(input, null, false);
-                if (obj != null) return obj;
+
+                try {
+                    return validate(input, null, false);
+                } catch (ValidateException e) {
+                    Console.println(e.getMessage());
+                }
             }
         } else {
             String input = valueGetter.get();
-            Object obj;
-            if (prevValue != null && input.equals("<")) return prevValue;
-            else if (input.equals("#validate_initial")) {
-                obj = validate((prevValue != null) ? prevValue.toString() : null,
-                        text.substring(0,1).toUpperCase() + text.substring(1) + ": ",
-                        false);
-            } else {
-                obj = validate(input, null, false);
+            try {
+                if (prevValue != null && input.equals("<")) return prevValue;
+                else if (input.equals("#validate_initial")) {
+                    return validate((prevValue != null) ? prevValue.toString() : null,
+                            text.substring(0, 1).toUpperCase() + text.substring(1) + ": ",
+                            false);
+                } else {
+                    return validate(input, null, false);
+                }
+            } catch (ValidateException e) {
+                Console.println(e.getMessage());
+                throw new ExecuteScriptFailedException();
             }
-            if (obj == null) throw new ExecuteScriptFailedException();
-            return obj;
         }
     }
 
@@ -117,7 +118,7 @@ public class InputValidator {
      * Validate input value by type and range
      * @return Object, cast to specified type
      */
-    public Object validate(String input, String fieldName, Boolean arg) {
+    public Object validate(String input, String fieldName, Boolean arg) throws ValidateException {
         if (fieldName == null) fieldName = "";
         try {
             if (!canBeNull && (input==null || input.trim().isEmpty())) {
@@ -127,14 +128,15 @@ public class InputValidator {
             input = input.trim();
 
             if (cl == String.class) {
+                if (input.trim().isEmpty()) return null;
                 return input;
 
             } else if (cl == MovieGenre.class) {
-                if (input.isEmpty()) return null;
                 MovieGenre mg = MovieGenre.checkElement(input);
                 if (mg != null) return mg;
                 throw new InvalidEnumEntryException();
             } else if (cl == MpaaRating.class) {
+                if (input.isEmpty()) return null;
                 MpaaRating mr = MpaaRating.checkElement(input);
                 if (mr != null) return mr;
                 throw new InvalidEnumEntryException();
@@ -163,15 +165,15 @@ public class InputValidator {
             }
 
         } catch (EmptyEntryException e) {
-            Console.println(arg ? "Error: No argument find." : fieldName + "Field can't be empty.");
+            throw new ValidateException(arg ? "Error: No argument find." : fieldName + "Field can't be empty.");
         } catch (InvalidEnumEntryException e) {
-            Console.println(arg ? "Argument not one of shown constants." : fieldName + "Input value not one of shown constants.");
+            throw new ValidateException(arg ? "Argument not one of shown constants." : fieldName + "Input value not one of shown constants.");
         }
         catch (NumberFormatException e) {
-            Console.println(arg ? "Argument has wrong number format!" : fieldName + "Invalid number format.");
+            throw new ValidateException(arg ? "Argument has wrong number format!" : fieldName + "Invalid number format.");
         } catch (InvalidRangeException e) {
-            Console.println(arg ? "Argument has wrong number range!" : fieldName + "Invalid number range.");
+            throw new ValidateException(arg ? "Argument has wrong number range!" : fieldName + "Invalid number range.");
         }
-        return null;
+        throw new ValidateException("Validation error.");
     }
 }

@@ -211,9 +211,10 @@ public class MovieCollection {
                 .loadPreviousValue(updMode, updMode ? movie.getOscarsCount() : null)
                 .interactiveInput("number of Oscars", printMode, valueGetter);
 
-        MovieGenre movieGenre = (MovieGenre) new InputValidator(MovieGenre.class, true)
+        MovieGenre movieGenre = (MovieGenre) new InputValidator(MovieGenre.class, false)
                 .loadPreviousValue(updMode, updMode ? movie.getMovieGenre() : null)
                 .interactiveInput("movieGenre", MovieGenre.values(), printMode, valueGetter);
+
         Object obj = new InputValidator(MpaaRating.class, true)
                 .loadPreviousValue(updMode, updMode ? movie.getMpaaRating() : null)
                 .interactiveInput("mpaaRating", MpaaRating.values(), printMode, valueGetter);

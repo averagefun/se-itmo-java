@@ -43,7 +43,7 @@ public class Movie implements Comparable<Movie> {
     }
 
     public void updateMovie(@NotNull String name, @NotNull Coordinates coordinates, int oscarsCount, @NotNull MovieGenre movieGenre,
-                 @Nullable MpaaRating mpaaRating, @Nullable Person director) {
+                 @Nullable MpaaRating mpaaRating, @NotNull Person director) {
         this.name = name;
         this.coordinates = coordinates;
         this.oscarsCount = oscarsCount;

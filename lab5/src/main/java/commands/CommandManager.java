@@ -6,10 +6,7 @@ import console.Console;
 import console.FileManager;
 import console.MyFile;
 import data.*;
-import exceptions.CommandNotFindException;
-import exceptions.ExecuteScriptFailedException;
-import exceptions.FileRecursionException;
-import exceptions.InvalidArgumentException;
+import exceptions.*;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -123,10 +120,14 @@ public class CommandManager {
         putCommand("show", "show all movies OR argument -> {id}, show specific movie", (arg) -> {
             if (arg == null) Console.println(mc);
             else {
-                Object obj = new InputValidator(int.class, false, 0, Double.MAX_VALUE)
-                        .validate(arg, null, true);
-                if (obj == null) throw new InvalidArgumentException();
-                int id = (int) obj;
+                int id;
+                try {
+                    id = (int) new InputValidator(int.class, false, 0, Double.MAX_VALUE)
+                            .validate(arg, null, true);
+                } catch (ValidateException e) {
+                    Console.println(e.getMessage());
+                    throw new InvalidArgumentException();
+                }
                 Movie m = mc.getMovieById(id);
 
                 // Format creating date
@@ -149,10 +150,14 @@ public class CommandManager {
         });
 
         putCommand("update", "argument -> {id}, update movie by id", (arg) -> {
-            Object obj = new InputValidator(int.class, false, 0, Double.MAX_VALUE)
-                    .validate(arg, null, true);
-            if (obj == null) throw new InvalidArgumentException();
-            int id = (int) obj;
+            int id;
+            try {
+                id = (int) new InputValidator(int.class, false, 0, Double.MAX_VALUE)
+                        .validate(arg, null, true);
+            } catch (ValidateException e) {
+                Console.println(e.getMessage());
+                throw new InvalidArgumentException();
+            }
             Movie oldMovie = mc.getMovieById(id);
             if (oldMovie == null) throw new InvalidArgumentException("Film with id " + id + " not found.");
             Console.println("To update movie lead the instruction below, to save previous value type '<':", printMode);
@@ -161,10 +166,15 @@ public class CommandManager {
         });
 
         putCommand("remove_by_id", "argument -> {id}, remove movie by id", (arg) -> {
-            Object obj = new InputValidator(int.class, false, 0, Double.MAX_VALUE)
-                                .validate(arg, null, true);
-            if (obj == null) throw new InvalidArgumentException();
-            int id = (int) obj;
+            int id;
+            try {
+                id = (int) new InputValidator(int.class, false, 0, Double.MAX_VALUE)
+                        .validate(arg, null, true);
+            }
+            catch (ValidateException e) {
+                Console.println(e.getMessage());
+                throw new InvalidArgumentException();
+            }
             Console.println((mc.removeMovieById(id)) ? "Movie successfully deleted!" : "Movie with current id doesn't exist.", printMode);
         });
 
@@ -188,10 +198,14 @@ public class CommandManager {
 
         putCommand("execute_script", "argument -> {file_name}, execute script file", (arg) -> {
 
-            Object obj = new InputValidator(String.class, false)
-                                .validate(arg, null, true);
-            if (obj == null) throw new InvalidArgumentException();
-            String filePath = (String) obj;
+            String filePath;
+            try {
+                filePath = (String) new InputValidator(String.class, false)
+                                    .validate(arg, null, true);
+            } catch (ValidateException e) {
+                Console.println(e.getMessage());
+                throw new InvalidArgumentException();
+            }
 
             MyFile myFile = new MyFile(filePath);
             if (!fileHistory.add(myFile)) {
@@ -234,26 +248,38 @@ public class CommandManager {
         });
 
         putCommand("remove_greater", "argument -> {id}, remove from collection all movies if its oscars count greater than current movie", (arg) -> {
-            Object obj = new InputValidator(int.class, false, 0, Double.MAX_VALUE)
-                    .validate(arg, null, false);
-            if (obj == null) throw new InvalidArgumentException();
-            int id = (int) obj;
+            int id;
+            try {
+                id = (int) new InputValidator(int.class, false, 0, Double.MAX_VALUE)
+                        .validate(arg, null, false);
+            } catch (ValidateException e) {
+                Console.println(e.getMessage());
+                throw new InvalidArgumentException();
+            }
             Console.println((mc.removeGreater(id)) ? "Greater movies successfully deleted!" : "There are no movies greater than this.", printMode);
         });
 
         putCommand("remove_lower", "argument -> {id}, remove from collection all movies if its oscars count lower than current movie", (arg) -> {
-            Object obj = new InputValidator(int.class, false, 0, Double.MAX_VALUE)
-                    .validate(arg, null, false);
-            if (obj == null) throw new InvalidArgumentException();
-            int id = (int) obj;
+            int id;
+            try {
+                id = (int) new InputValidator(int.class, false, 0, Double.MAX_VALUE)
+                        .validate(arg, null, false);
+            } catch (ValidateException e) {
+                Console.println(e.getMessage());
+                throw new InvalidArgumentException();
+            }
             Console.println((mc.removeLower(id)) ? "Greater movies successfully deleted!" : "There are no movies lower than this.", printMode);
         });
 
         putCommand("filter_less_than_oscars_count", "argument -> {oscarsCount}, display all movies where oscars count lower than current", (arg) -> {
-            Object obj = new InputValidator(int.class, false, 0, Double.MAX_VALUE)
-                    .validate(arg, null, false);
-            if (obj == null) throw new InvalidArgumentException();
-            int oscarsCount = (int) obj;
+            int oscarsCount;
+            try {
+                oscarsCount = (int) new InputValidator(int.class, false, 0, Double.MAX_VALUE)
+                        .validate(arg, null, false);
+            } catch (ValidateException e) {
+                Console.println(e.getMessage());
+                throw new InvalidArgumentException();
+            }
             List<Movie> subCollection = mc.getPQ().stream()
                     .filter(movie -> movie.getOscarsCount() < oscarsCount)
                     .collect(Collectors.toList());
@@ -267,10 +293,14 @@ public class CommandManager {
         });
 
         putCommand("filter_greater_than_director", "argument -> {id}, display all movies where director greater than current", (arg) -> {
-            Object obj = new InputValidator(int.class, false, 0, Double.MAX_VALUE)
-                    .validate(arg, null, false);
-            if (obj == null) throw new InvalidArgumentException();
-            int id = (int) obj;
+            int id;
+            try {
+                id = (int) new InputValidator(int.class, false, 0, Double.MAX_VALUE)
+                        .validate(arg, null, false);
+            } catch (ValidateException e) {
+                Console.println(e.getMessage());
+                throw new InvalidArgumentException();
+            }
             Person d = mc.getMovieById(id).getDirector();
             List<Movie> subCollection = mc.getPQ().stream()
                     .filter(movie -> movie.getDirector().compareTo(d) > 0)
