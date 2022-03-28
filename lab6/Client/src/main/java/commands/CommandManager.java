@@ -5,7 +5,7 @@ import collection.MovieCollection;
 import console.Console;
 import console.FileManager;
 import console.MyFile;
-import data.*;
+import data.Person;
 import exceptions.*;
 
 import java.io.FileNotFoundException;
@@ -233,7 +233,7 @@ public class CommandManager {
         });
 
         putCommand("exit", "exit the program without saving data", (arg) -> { 
-            Console.println("Bye!", printMode);
+            Console.println("Bye, have a great time:)", printMode);
             System.exit(0);
         });
 

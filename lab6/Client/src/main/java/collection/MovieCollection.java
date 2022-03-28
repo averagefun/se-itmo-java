@@ -22,11 +22,13 @@ import java.util.stream.Collectors;
 public class MovieCollection {
     private PriorityQueue<Movie> pq;
     private final LocalDate initDate;
-
     private String startFilePath;
 
-    public MovieCollection(FileManager fm) {
-        this(fm, null);
+    public MovieCollection() {
+        this.pq = new PriorityQueue<>();
+        this.initDate = LocalDate.now();
+        this.startFilePath = null;
+        noJsonFileWarning();
     }
 
     /**
@@ -38,40 +40,41 @@ public class MovieCollection {
         this.initDate = LocalDate.now();
         this.startFilePath = null;
 
-        // try to initialize values from start file
-        loadJsonFile(fm, startFilePath);
-    }
-
-    private void loadJsonFile(FileManager fm, String filePath) {
+        // initialize values from start file
         try {
-            this.pq = fm.readJsonFile(filePath);
+            this.pq = fm.readJsonFile(startFilePath);
             int maxId = pq.stream()
-                    .max(Comparator.comparing(Movie::getId))
-                    .orElse(new Movie())
-                    .getId();
+                            .max(Comparator.comparing(Movie::getId))
+                            .orElse(new Movie())
+                            .getId();
 
             pq.forEach(movie -> {
-                try {
-                    inputAndUpdateMovie(true, movie, false, () -> "#validate_initial");
-                } catch (ExecuteScriptFailedException e) {
-                    pq = new PriorityQueue<>();
-                    throw new InitialFileInvalidValuesException();
-                }
-            });
+                        try {
+                            inputAndUpdateMovie(true, movie, false, () -> "#validate_initial");
+                        } catch (ExecuteScriptFailedException e) {
+                            pq = new PriorityQueue<>();
+                            throw new InitialFileInvalidValuesException();
+                        }
+                    });
 
             Movie.setCounter(maxId);
-            this.startFilePath = filePath;
+            this.startFilePath = startFilePath;
             Console.println("-> Collection with " + pq.size() + " movies was loaded from file '" + startFilePath + "'");
         } catch (JsonSyntaxException e) {
-            Console.println("ERROR: Syntax error in json file. File not loaded.");
-            System.exit(0);
+            Console.println("-> Syntax error in json file. File not loaded.");
+            noJsonFileWarning();
         } catch (IOException e) {
-            Console.println("ERROR: Program couldn't find json file to load the collection:(");
-            System.exit(0);
+            Console.println("-> Program couldn't find json file to load the collection:(");
+            noJsonFileWarning();
         } catch (InitialFileInvalidValuesException e) {
-            Console.println("ERROR: -> Json file not loaded.");
-            System.exit(0);
+            Console.println("-> Json file not loaded.");
+            noJsonFileWarning();
         }
+    }
+
+    private void noJsonFileWarning() {
+        Console.println("Warning: you can NOT save your program data without json file!");
+        Console.println("______________________________________________________________");
     }
 
     public int size() {

@@ -1,7 +1,7 @@
 package console;
 
-import collection.MovieCollection;
 import collection.Movie;
+import collection.MovieCollection;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -14,7 +14,6 @@ import java.util.Queue;
  */
 public class FileManager {
     private final JsonParser jp;
-    private static final String DEFAULT_START_FILE = "./db.json";
 
     public FileManager() {
         this.jp = new JsonParser();
@@ -49,16 +48,7 @@ public class FileManager {
      * @throws IOException raise if file not found
      */
     public String readFile(String path) throws IOException {
-        File file;
-        if (path == null) {
-            file = new File(DEFAULT_START_FILE);
-            if(file.createNewFile()) {
-                Console.println("-> Using default file " + DEFAULT_START_FILE + " to save collection.");
-            }
-        } else {
-            file = new File(path);
-        }
-        InputStreamReader isr = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8);
+        InputStreamReader isr = new InputStreamReader(new FileInputStream(path), StandardCharsets.UTF_8);
         BufferedReader br = new BufferedReader(isr);
 
         StringBuilder sb = new StringBuilder();

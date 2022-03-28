@@ -14,8 +14,8 @@ import java.util.Scanner;
 
 public class Server {
 
-    private DatagramSocket datagramSocket;
-    private byte[] buffer = new byte[256];
+    private final DatagramSocket datagramSocket;
+    private final byte[] buffer = new byte[256];
 
     public Server(DatagramSocket datagramSocket) {
         this.datagramSocket = datagramSocket;
@@ -47,7 +47,7 @@ public class Server {
         if (args.length >= 1) {
             mc = new MovieCollection(fm, args[0]);
         } else {
-            mc = new MovieCollection();
+            mc = new MovieCollection(fm);
         }
 
         Scanner sc = new Scanner(System.in);
