@@ -11,5 +11,5 @@ import java.io.IOException;
  */
 @FunctionalInterface
 public interface Command {
-    void run(String arg) throws InvalidArgumentException, ExecuteScriptFailedException, IOException;
+    void run(Object arg) throws InvalidArgumentException, ExecuteScriptFailedException, IOException;
 }

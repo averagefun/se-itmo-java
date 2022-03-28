@@ -1,7 +1,7 @@
 package console;
 
 import collection.MovieCollection;
-import collection.Movie;
+import data.Movie;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -14,7 +14,7 @@ import java.util.Queue;
  */
 public class FileManager {
     private final JsonParser jp;
-    private static final String DEFAULT_START_FILE = "./db.json";
+    public static final String DEFAULT_START_FILE = "db.json";
 
     public FileManager() {
         this.jp = new JsonParser();
@@ -39,6 +39,7 @@ public class FileManager {
      */
     public PriorityQueue<Movie> readJsonFile(String path) throws IOException {
         String text = readFile(path);
+        if (text.trim().isEmpty()) return new PriorityQueue<>();
         return jp.jsonToCollection(text);
     }
 
@@ -53,7 +54,7 @@ public class FileManager {
         if (path == null) {
             file = new File(DEFAULT_START_FILE);
             if(file.createNewFile()) {
-                Console.println("-> Using default file " + DEFAULT_START_FILE + " to save collection.");
+                Console.println("-> Create file '" + DEFAULT_START_FILE + "'.");
             }
         } else {
             file = new File(path);

@@ -1,9 +1,5 @@
-package collection;
+package data;
 
-import data.Coordinates;
-import data.MovieGenre;
-import data.MpaaRating;
-import data.Person;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import exceptions.InvalidRangeException;

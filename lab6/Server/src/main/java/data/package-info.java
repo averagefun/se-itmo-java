@@ -1,5 +1,5 @@
 /**
- * Provide classes that represent Movie fields.
+ * Provide classes that represent Movie fields include Movie itself
  */
 
 package data;

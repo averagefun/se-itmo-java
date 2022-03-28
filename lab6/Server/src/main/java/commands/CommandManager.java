@@ -1,6 +1,6 @@
 package commands;
 
-import collection.Movie;
+import data.Movie;
 import collection.MovieCollection;
 import console.Console;
 import console.FileManager;
@@ -20,7 +20,6 @@ import java.util.stream.Collectors;
  */
 public class CommandManager {
     private final Map<String, Command> commands;
-    private final Map<String, String> descriptions;
     private final Scanner sc;
     private final MovieCollection mc;
     private final FileManager fm;
@@ -33,7 +32,6 @@ public class CommandManager {
     public CommandManager(Scanner sc, MovieCollection mc, FileManager fm) {
         this.sc = sc;
         this.commands = new HashMap<>();
-        this.descriptions = new HashMap<>();
         this.mc = mc;
         this.fm = fm;
         this.fileHistory = new HashSet<>();
@@ -46,17 +44,15 @@ public class CommandManager {
     /**
      * Add new command
      * @param name name of command that used to execute command
-     * @param description description of command showed in help mode
      * @param action what this command going to do (action of command)
      */
-    public void putCommand(String name, String description, Command action){
+    public void putCommand(String name, Command action){
         commands.put(name, action);
-        descriptions.put(name, description);
     }
 
     /**
      * Get command by name
-     * @param name the name of command that defined in {@link #putCommand(String, String, Command)}
+     * @param name the name of command that defined in {@link #putCommand(String, Command)}
      * @return Command
      */
     public Command getCommand(String name) {
@@ -64,15 +60,14 @@ public class CommandManager {
     }
 
     /**
-     * Run command by name defined in {@link #putCommand(String, String, Command)}
-     * @param name command name
-     * @param arg argument, given to command
+     * Run command by name defined in {@link #putCommand(String, Command)}
+     * @param cp Packet that contain command name and command argument
      */
-    public void runCommand(String name, String arg) {
+    public <T> void runCommand(CommandPacket<T> cp) {
         try {
-            Command command = getCommand(name);
+            Command command = getCommand(cp.getName());
             if (command == null) throw new CommandNotFindException("Command not find.");
-            getCommand(name).run(arg);
+            getCommand(cp.getName()).run(cp.getArg());
         } catch (NullPointerException e) {
             Console.println("Command did not run successfully, problem detected.");
         }
@@ -83,23 +78,6 @@ public class CommandManager {
         } catch (IOException e) {
             Console.println("Error: file not found.");
         }
-    }
-
-    /**
-     * Run command with no argument
-     * @param name command name
-     */
-    public void runCommand(String name) {
-        runCommand(name, null);
-    }
-
-    @Override
-    public String toString() {
-        StringBuilder sb = new StringBuilder("Here is command list:\n*");
-        for (String key: descriptions.keySet()) {
-            sb.append(key).append(": ").append(descriptions.get(key)).append("\n*");
-        }
-        return sb.substring(0,sb.length()-2);
     }
 
     private void setPrintMode() {
@@ -113,11 +91,9 @@ public class CommandManager {
     }
 
     private void initCommands(){
-        putCommand("help", "get information about all available commands", (arg) -> Console.println(this)); 
+        putCommand("info", (arg) -> Console.println(mc.getInfo()));
 
-        putCommand("info", "get information about movies collection (type, data, size)", (arg) -> Console.println(mc.getInfo())); 
-
-        putCommand("show", "show all movies OR argument -> {id}, show specific movie", (arg) -> {
+        putCommand("show", (arg) -> {
             if (arg == null) Console.println(mc);
             else {
                 int id;
@@ -142,14 +118,14 @@ public class CommandManager {
             }
         });
 
-        putCommand("add", "add movie to collection", (arg) -> {
+        putCommand("add", (arg) -> {
             Console.println("To add movie lead the instruction below:", printMode);
             Movie movie = MovieCollection.inputAndUpdateMovie(false, null, printMode, valueGetter);
             mc.addMovie(movie);
             Console.println("Successfully added element!", printMode);
         });
 
-        putCommand("update", "argument -> {id}, update movie by id", (arg) -> {
+        putCommand("update", (arg) -> {
             int id;
             try {
                 id = (int) new InputValidator(int.class, false, 0, Double.MAX_VALUE)
@@ -165,7 +141,7 @@ public class CommandManager {
             Console.println("Successfully updated element!", printMode);
         });
 
-        putCommand("remove_by_id", "argument -> {id}, remove movie by id", (arg) -> {
+        putCommand("remove_by_id", (arg) -> {
             int id;
             try {
                 id = (int) new InputValidator(int.class, false, 0, Double.MAX_VALUE)
@@ -178,12 +154,12 @@ public class CommandManager {
             Console.println((mc.removeMovieById(id)) ? "Movie successfully deleted!" : "Movie with current id doesn't exist.", printMode);
         });
 
-        putCommand("clear", "clear collection", (arg) -> {
+        putCommand("clear", (arg) -> {
             mc.clear();
             Console.println("Collection cleared successfully!", printMode);
         });
 
-        putCommand("save", "save collection to file", (arg) -> {
+        putCommand("save", (arg) -> {
             if (mc.getStartFilePath() != null) {
                 try {
                     fm.writeToJsonFile(mc.getStartFilePath(), mc);
@@ -196,7 +172,7 @@ public class CommandManager {
             }
         });
 
-        putCommand("execute_script", "argument -> {file_name}, execute script file", (arg) -> {
+        putCommand("execute_script", (arg) -> {
 
             String filePath;
             try {
@@ -232,12 +208,12 @@ public class CommandManager {
             setPrintMode();
         });
 
-        putCommand("exit", "exit the program without saving data", (arg) -> { 
+        putCommand("exit", (arg) -> {
             Console.println("Bye!", printMode);
             System.exit(0);
         });
 
-        putCommand("add_if_min", "add movie if it oscars count lower that the other collection", (arg) -> {
+        putCommand("add_if_min", (arg) -> {
             Movie movie = MovieCollection.inputAndUpdateMovie(false, null, printMode, valueGetter);
             if (movie.compareTo(mc.getLowestByOscars()) < 0) {
                 mc.addMovie(movie);
@@ -247,7 +223,7 @@ public class CommandManager {
             }
         });
 
-        putCommand("remove_greater", "argument -> {id}, remove from collection all movies if its oscars count greater than current movie", (arg) -> {
+        putCommand("remove_greater", (arg) -> {
             int id;
             try {
                 id = (int) new InputValidator(int.class, false, 0, Double.MAX_VALUE)
@@ -259,7 +235,7 @@ public class CommandManager {
             Console.println((mc.removeGreater(id)) ? "Greater movies successfully deleted!" : "There are no movies greater than this.", printMode);
         });
 
-        putCommand("remove_lower", "argument -> {id}, remove from collection all movies if its oscars count lower than current movie", (arg) -> {
+        putCommand("remove_lower", (arg) -> {
             int id;
             try {
                 id = (int) new InputValidator(int.class, false, 0, Double.MAX_VALUE)
@@ -271,7 +247,7 @@ public class CommandManager {
             Console.println((mc.removeLower(id)) ? "Greater movies successfully deleted!" : "There are no movies lower than this.", printMode);
         });
 
-        putCommand("filter_less_than_oscars_count", "argument -> {oscarsCount}, display all movies where oscars count lower than current", (arg) -> {
+        putCommand("filter_less_than_oscars_count", (arg) -> {
             int oscarsCount;
             try {
                 oscarsCount = (int) new InputValidator(int.class, false, 0, Double.MAX_VALUE)
@@ -292,7 +268,7 @@ public class CommandManager {
             }
         });
 
-        putCommand("filter_greater_than_director", "argument -> {id}, display all movies where director greater than current", (arg) -> {
+        putCommand("filter_greater_than_director", (arg) -> {
             int id;
             try {
                 id = (int) new InputValidator(int.class, false, 0, Double.MAX_VALUE)
@@ -314,7 +290,7 @@ public class CommandManager {
             }
         });
 
-        putCommand("print_unique_oscars_count", "print all unique values of oscars count in collection", (arg) -> {
+        putCommand("print_unique_oscars_count", (arg) -> {
             Set<Integer> uniqOscar = new HashSet<>();
             mc.getPQ().forEach(movie -> uniqOscar.add(movie.getOscarsCount()));
 

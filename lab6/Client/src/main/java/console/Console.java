@@ -3,36 +3,46 @@ package console;
 import commands.CommandManager;
 
 import java.util.NoSuchElementException;
+import java.util.Scanner;
 
 /**
  * Class represent console, that produce interactive input/output with user
  */
 public class Console {
+    public final Scanner sc;
+    private final Client client;
     private final CommandManager cm;
 
-    public Console(CommandManager cm) {
+    public Console(Scanner sc, Client client, CommandManager cm) {
+        this.sc = sc;
+        this.client = client;
         this.cm = cm;
     }
 
     /**
      * Cycle, that listen user input before exit from program
      */
-    public void interactiveMode(String str) {
-        String[] input = {};
-        try {
-            input = str.trim().split(" ");
-        } catch (NoSuchElementException e) {
-            cm.runCommand("exit");
+    public void interactiveMode() {
+        //noinspection InfiniteLoopStatement
+        while(true) {
+            Console.print("$ ");
+            String[] input = {};
+            try {
+                input = sc.nextLine().trim().split(" ");
+            } catch (NoSuchElementException e) {
+                cm.runCommand("exit");
+            }
+            String command = null;
+            String arg = null;
+            if (input.length >= 1) {
+                command = input[0];
+            }
+            if (input.length >= 2) {
+                arg = input[1];
+            }
+            cm.runCommand(command, arg);
         }
-        String command = null;
-        String arg = null;
-        if (input.length >= 1) {
-            command = input[0];
-        }
-        if (input.length >= 2) {
-            arg = input[1];
-        }
-        cm.runCommand(command, arg);
+
     }
 
     public static void print(Object printable){
@@ -54,6 +64,4 @@ public class Console {
     public static void println(Object printable, boolean printMode){
         if (printMode) println(printable);
     }
-
-
 }

@@ -60,8 +60,9 @@ public class MovieCollection {
             });
 
             Movie.setCounter(maxId);
-            this.startFilePath = filePath;
-            Console.println("-> Collection with " + pq.size() + " movies was loaded from file '" + startFilePath + "'");
+            this.startFilePath = (filePath != null) ? filePath : FileManager.DEFAULT_START_FILE;
+            if (filePath == null) Console.println("-> Using default file '" + FileManager.DEFAULT_START_FILE + "' to save collection.");
+            else Console.println("-> Collection with " + pq.size() + " movies was loaded from file '" + startFilePath + "'");
         } catch (JsonSyntaxException e) {
             Console.println("ERROR: Syntax error in json file. File not loaded.");
             System.exit(0);

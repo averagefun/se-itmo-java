@@ -1,5 +1,5 @@
 /**
- * Provide collection manager and collection element.
+ * Provide classes that work with collection
  */
 
 package collection;
