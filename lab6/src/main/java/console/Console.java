@@ -1,7 +1,7 @@
 package console;
 
 /**
- * Class represent console, that produce output
+ * Class represent console, that produce input/output
  */
 public class Console {
     public static void print(Object printable){

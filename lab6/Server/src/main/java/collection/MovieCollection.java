@@ -54,7 +54,7 @@ public class MovieCollection {
             for (Movie m: pq) {
                 if (!ids.add(m.getId()))
                     throw new InitialFileInvalidValuesException(
-                            "ERROR: -> Movie's ids in json file must have unique values.");
+                            "movie's ids in json file must have unique values.");
             }
 
             pq.forEach(movie -> {
@@ -71,16 +71,16 @@ public class MovieCollection {
             if (filePath == null) log.info("using default file '{}' to save collection", FileManager.DEFAULT_START_FILE);
             else log.info("collection with {} movies was loaded from file '{}'", pq.size(), startFilePath);
         } catch (JsonSyntaxException e) {
-            log.error("ERROR: Syntax error in json file. File not loaded.");
+            log.error("syntax error in json file. File not loaded.");
             System.exit(0);
         } catch (IOException e) {
-            log.error("ERROR: Program couldn't find json file to load the collection:(");
+            log.error("program couldn't find json file to load the collection:(");
             System.exit(0);
         } catch (InitialFileInvalidValuesException e) {
             if (e.getMessage() != null) {
                 log.error(e.getMessage());
             } else {
-                log.error("ERROR: -> Json file not loaded.");
+                log.error("json file not loaded.");
             }
             System.exit(0);
         }

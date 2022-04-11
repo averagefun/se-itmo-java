@@ -214,8 +214,9 @@ public class CommandManager {
         });
 
         putCommand("exit", "exit the client program", (name, arg) -> {
+            Console.println("Closing client app...");
             System.exit(0);
-            return "Bye!";
+            return null;
         });
 
         putCommand("add_if_min", "add movie if it oscars count lower that the other collection", (name, arg) -> {
@@ -248,5 +249,28 @@ public class CommandManager {
 
         putCommand("print_unique_oscars_count", "print all unique values of oscars count in collection", (name, arg) ->
                 getStringFromServer(new CommandPacket(name)));
+
+        // Server commands (only admins)
+        putCommand("ADMIN:save", "save server's collection", (name, arg) -> {
+            Console.println(getStringFromServer(new CommandPacket(name, "request_code")));
+            String code = "000000";
+            try {
+                code = sc.nextLine().trim();
+            } catch (NoSuchElementException e) {
+                runCommand("exit");
+            }
+            return getStringFromServer(new CommandPacket(name, code));
+        });
+
+        putCommand("ADMIN:shutdown_server", "shut down server", (name, arg) -> {
+            Console.println(getStringFromServer(new CommandPacket(name, "request_code")));
+            String code = "000000";
+            try {
+                code = sc.nextLine().trim();
+            } catch (NoSuchElementException e) {
+                runCommand("exit");
+            }
+            return getStringFromServer(new CommandPacket(name, code));
+        });
     }
 }

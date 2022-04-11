@@ -68,7 +68,6 @@ public class InputValidator {
                 try {
                     input = valueGetter.get();
                 } catch (NoSuchElementException e) {
-                    Console.println("Bye!");
                     System.exit(0);
                 }
                 if (prevValue != null && input.equals("<")) return prevValue;

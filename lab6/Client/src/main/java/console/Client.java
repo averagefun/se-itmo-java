@@ -42,6 +42,7 @@ public class Client {
             byteBuffer.clear();
 
             sizeArr = new byte[10];
+            datagramChannel.socket().setSoTimeout(2000);
             datagramChannel.receive(ByteBuffer.wrap(sizeArr));
             size = 0;
             for (int i = 0; i < sizeArr.length; i++) {

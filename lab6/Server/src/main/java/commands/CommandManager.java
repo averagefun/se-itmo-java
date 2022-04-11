@@ -9,7 +9,6 @@ import exceptions.ExecuteScriptFailedException;
 import exceptions.InvalidArgumentException;
 import network.CommandPacket;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -26,6 +25,7 @@ public class CommandManager {
     private final MovieCollection mc;
     private final FileManager fm;
     private final Logger log = LoggerFactory.getLogger(MovieCollection.class);
+    private String serverCode = "000000";
 
     public CommandManager(MovieCollection mc, FileManager fm) {
         this.commands = new HashMap<>();
@@ -64,9 +64,7 @@ public class CommandManager {
                 log.debug("processing command '{}': command not found.", cp.getName());
                 throw new CommandNotFindException("Command not found.");
             }
-            Object output = getCommand(cp.getName()).run(cp.getArg());
-            log.debug("processing command '{}'", cp.getName());
-            return output;
+            return command.run(cp.getArg());
         } catch (NullPointerException e) {
             log.debug("processing command '{}': command did not run successfully, problem detected.", cp.getName());
             return "Command did not run successfully, problem detected.";
@@ -132,25 +130,6 @@ public class CommandManager {
         putCommand("clear", (arg) -> {
             mc.clear();
             return "Collection cleared successfully!";
-        });
-
-        putCommand("save", (argObject) -> {
-            if (mc.getStartFilePath() != null) {
-                try {
-                    fm.writeToJsonFile(mc.getStartFilePath(), mc);
-                    return "Successfully saved to file!";
-                } catch (FileNotFoundException e) {
-                    return "Error: saving file not found.";
-                }
-            } else {
-                return "Error: saving file not specified.";
-            }
-        });
-
-        putCommand("exit", (argObject) -> {
-            log.info("Shutting down server...");
-            System.exit(0);
-            return null;
         });
 
         putCommand("add_if_min", (argObject) -> {
@@ -220,5 +199,37 @@ public class CommandManager {
                 return sb.toString();
             }
         });
+
+        // Server command (Admins only)
+        putCommand("ADMIN:save", (argObject) -> {
+            String str = (String) argObject;
+            if (str.equals("request_code")) {
+                return sendRandomCode();
+            } else if (str.equals(serverCode)) {
+                fm.writeToJsonFile(mc.getStartFilePath(), mc);
+                return "Collection saved successfully!";
+            }
+            return "Invalid code: permission denied.";
+        });
+
+        putCommand("ADMIN:shutdown_server", (argObject) -> {
+            String str = (String) argObject;
+            if (str.equals("request_code")) {
+                return sendRandomCode();
+            } else if (str.equals(serverCode)) {
+                fm.writeToJsonFile(mc.getStartFilePath(), mc);
+                System.exit(0);
+            }
+            return "Invalid code: permission denied.";
+        });
+    }
+
+    private String sendRandomCode() {
+        Random rnd = new Random();
+        int number = rnd.nextInt(999999);
+
+        serverCode = String.format("%06d", number);
+        log.info("CODE TO ACCESS SERVER COMMAND: {}", serverCode);
+        return "Enter the 6 digit code, that was shown in server's logs:";
     }
 }
