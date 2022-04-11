@@ -12,20 +12,30 @@
     <artifactId>Server</artifactId>
     <dependencies>
         <dependency>
+            <groupId>ru.ifmo.se</groupId>
+            <artifactId>lab6</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
             <version>2.9.0</version>
         </dependency>
         <dependency>
-            <groupId>org.realityforge.org.jetbrains.annotations</groupId>
-            <artifactId>org.jetbrains.annotations</artifactId>
-            <version>1.7.0</version>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.36</version>
         </dependency>
         <dependency>
-            <groupId>ru.ifmo.se</groupId>
-            <artifactId>lab6</artifactId>
-            <version>1.0-SNAPSHOT</version>
-            <scope>compile</scope>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-core</artifactId>
+            <version>1.2.11</version>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.2.11</version>
         </dependency>
     </dependencies>
 

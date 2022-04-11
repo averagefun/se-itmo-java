@@ -13,19 +13,20 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class Server {
     private final DatagramSocket datagramSocket;
-
     private final CommandManager cm;
+    private final Logger log = LoggerFactory.getLogger(Server.class);
 
     public Server(DatagramSocket datagramSocket, CommandManager cm) {
         this.datagramSocket = datagramSocket;
         this.cm = cm;
     }
 
-    public void receiveAndAnswer() {
-        while(true) {
-        try {
+    private void receiveAndAnswer() throws IOException, ClassNotFoundException {
             byte[] sizeArr = new byte[10];
             DatagramPacket datagramPacket = new DatagramPacket(sizeArr, sizeArr.length);
             datagramSocket.receive(datagramPacket);
@@ -37,14 +38,17 @@ public class Server {
             byte[] buffer = new byte[size];
             datagramPacket = new DatagramPacket(buffer, buffer.length);
             datagramSocket.receive(datagramPacket);
+
+            InetAddress inetAddress = datagramPacket.getAddress();
+            int port = datagramPacket.getPort();
+
+            log.info("received {} bytes of data from {}:{}", size, inetAddress, port);
+
             ByteArrayInputStream bais = new ByteArrayInputStream(buffer);
             ObjectInputStream ois = new ObjectInputStream(bais);
 
             Object receive = ois.readObject();
             Object objToSend = cm.runCommand((CommandPacket) receive);
-
-            InetAddress inetAddress = datagramPacket.getAddress();
-            int port = datagramPacket.getPort();
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             ObjectOutputStream oos = new ObjectOutputStream(baos);
@@ -62,11 +66,22 @@ public class Server {
             datagramSocket.send(datagramPacket);
             datagramPacket = new DatagramPacket(buffer, buffer.length, inetAddress, port);
             datagramSocket.send(datagramPacket);
-        } catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
-            break;
-        }}
+
+            log.info("send {} bytes of data to {}:{}", buffer.length, inetAddress, port);
     }
+    
+    public void start() {
+        log.info("successfully started at port {}", Common.PORT);
+        while (true) {
+            try {
+                receiveAndAnswer();
+            } catch (IOException | ClassNotFoundException e) {
+                e.printStackTrace();
+                break;
+            }
+        }
+    }
+        
 
     public static void main(String[] args) throws SocketException {
         FileManager fm = new FileManager();
@@ -82,8 +97,7 @@ public class Server {
 
         DatagramSocket datagramSocket = new DatagramSocket(Common.PORT);
         Server server = new Server(datagramSocket, cm);
-
-        server.receiveAndAnswer();
+        server.start();
     }
 
 }

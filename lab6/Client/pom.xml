@@ -12,11 +12,6 @@
     <artifactId>Client</artifactId>
     <dependencies>
         <dependency>
-            <groupId>org.realityforge.org.jetbrains.annotations</groupId>
-            <artifactId>org.jetbrains.annotations</artifactId>
-            <version>1.7.0</version>
-        </dependency>
-        <dependency>
             <groupId>ru.ifmo.se</groupId>
             <artifactId>lab6</artifactId>
             <version>1.0-SNAPSHOT</version>

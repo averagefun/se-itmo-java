@@ -1,13 +1,10 @@
 package commands;
 
-import collection.MovieCollection;
-import console.Client;
-import console.Console;
-import console.FileManager;
-import console.MyFile;
+import console.*;
 import data.Movie;
 import exceptions.*;
 import network.CommandPacket;
+import network.Common;
 
 import java.io.IOException;
 import java.util.*;
@@ -154,7 +151,7 @@ public class CommandManager {
             int id = (int) getObjectFromServer(new CommandPacket(name, "get_new_id"));
             Movie.setCounter(id);
             Console.println("To add movie lead the instruction below:", printMode);
-            Movie movie = MovieCollection.inputAndUpdateMovie(false, null, printMode, valueGetter);
+            Movie movie = Common.inputAndUpdateMovie(false, null, printMode, valueGetter);
             return getStringFromServer(new CommandPacket(name, movie));
         });
 
@@ -167,7 +164,7 @@ public class CommandManager {
             else {
                 Movie oldMovie = (Movie) response;
                 Console.println("To update movie lead the instruction below, to save previous value type '<':", printMode);
-                Movie movie = MovieCollection.inputAndUpdateMovie(true, oldMovie, printMode, valueGetter);
+                Movie movie = Common.inputAndUpdateMovie(true, oldMovie, printMode, valueGetter);
                 return getStringFromServer(new CommandPacket(name, movie));
             }
         });
@@ -225,7 +222,7 @@ public class CommandManager {
             int id = (int) getObjectFromServer(new CommandPacket(name, "get_new_id"));
             Movie.setCounter(id);
             Console.println("To add movie lead the instruction below:", printMode);
-            Movie movie = MovieCollection.inputAndUpdateMovie(false, null, printMode, valueGetter);
+            Movie movie = Common.inputAndUpdateMovie(false, null, printMode, valueGetter);
             return getStringFromServer(new CommandPacket(name, movie));
         });
 

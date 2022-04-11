@@ -1,11 +1,10 @@
-package commands;
+package console;
 
-import console.Console;
+import exceptions.*;
+import org.jetbrains.annotations.Nullable;
 import data.Color;
 import data.MovieGenre;
 import data.MpaaRating;
-import exceptions.*;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
 import java.util.NoSuchElementException;
@@ -92,8 +91,7 @@ public class InputValidator {
                     return validate(input, null, false);
                 }
             } catch (ValidateException e) {
-                Console.println(e.getMessage());
-                throw new ExecuteScriptFailedException();
+                throw new ExecuteScriptFailedException(e.getMessage());
             }
         }
     }

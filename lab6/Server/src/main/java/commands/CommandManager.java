@@ -1,11 +1,12 @@
 package commands;
 
 import collection.MovieCollection;
-import console.Console;
 import console.FileManager;
 import data.Movie;
 import data.Person;
-import exceptions.*;
+import exceptions.CommandNotFindException;
+import exceptions.ExecuteScriptFailedException;
+import exceptions.InvalidArgumentException;
 import network.CommandPacket;
 
 import java.io.FileNotFoundException;
@@ -14,6 +15,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Class that operates Command
  */
@@ -21,6 +25,7 @@ public class CommandManager {
     private final Map<String, Command> commands;
     private final MovieCollection mc;
     private final FileManager fm;
+    private final Logger log = LoggerFactory.getLogger(MovieCollection.class);
 
     public CommandManager(MovieCollection mc, FileManager fm) {
         this.commands = new HashMap<>();
@@ -55,9 +60,15 @@ public class CommandManager {
     public Object runCommand(CommandPacket cp) {
         try {
             Command command = getCommand(cp.getName());
-            if (command == null) throw new CommandNotFindException("Command not find.");
-            return getCommand(cp.getName()).run(cp.getArg());
+            if (command == null) {
+                log.debug("processing command '{}': command not found.", cp.getName());
+                throw new CommandNotFindException("Command not found.");
+            }
+            Object output = getCommand(cp.getName()).run(cp.getArg());
+            log.debug("processing command '{}'", cp.getName());
+            return output;
         } catch (NullPointerException e) {
+            log.debug("processing command '{}': command did not run successfully, problem detected.", cp.getName());
             return "Command did not run successfully, problem detected.";
         }
         catch (InvalidArgumentException e) {
@@ -65,6 +76,7 @@ public class CommandManager {
         } catch (ExecuteScriptFailedException|CommandNotFindException e) {
             return e.getMessage();
         } catch (IOException e) {
+            log.debug("processing command '{}': file not found.", cp.getName());
             return "Error: file not found";
         }
         return null;
@@ -136,9 +148,9 @@ public class CommandManager {
         });
 
         putCommand("exit", (argObject) -> {
-            Console.println("Server has shut down!");
+            log.info("Shutting down server...");
             System.exit(0);
-            return "shutdown";
+            return null;
         });
 
         putCommand("add_if_min", (argObject) -> {

@@ -8,6 +8,7 @@ import java.io.*;
 import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
+import java.util.NoSuchElementException;
 import java.util.Scanner;
 
 public class Client {
@@ -60,7 +61,34 @@ public class Client {
         }
     }
 
+    /**
+     * Cycle, that listen user input before exit from program
+     */
+    public void interactiveMode(Scanner sc, CommandManager cm) {
+        //noinspection InfiniteLoopStatement
+        while(true) {
+            Console.print("$ ");
+            String[] input = {};
+            try {
+                input = sc.nextLine().trim().split(" ");
+            } catch (NoSuchElementException e) {
+                cm.runCommand("exit");
+            }
+            String command = null;
+            String arg = null;
+            if (input.length >= 1) {
+                command = input[0];
+            }
+            if (input.length >= 2) {
+                arg = input[1];
+            }
+            cm.runCommand(command, arg);
+        }
+    }
+
     public static void main(String[] args) throws IOException {
+        Console.println("Welcome to client app. Enter command or type 'help'.");
+
         InetAddress inetAddress = InetAddress.getByName("localhost");
         Client client = new Client(inetAddress);
 
@@ -68,7 +96,6 @@ public class Client {
         FileManager fm = new FileManager();
         CommandManager cm = new CommandManager(sc, client, fm);
 
-        Console c = new Console(sc, client, cm);
-        c.interactiveMode();
+        client.interactiveMode(sc, cm);
     }
 }

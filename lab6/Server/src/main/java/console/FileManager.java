@@ -9,12 +9,17 @@ import java.util.ArrayDeque;
 import java.util.PriorityQueue;
 import java.util.Queue;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Class operates with files
  */
 public class FileManager {
     private final JsonParser jp;
     public static final String DEFAULT_START_FILE = "db.json";
+
+    private final Logger log = LoggerFactory.getLogger(FileManager.class);
 
     public FileManager() {
         this.jp = new JsonParser();
@@ -54,7 +59,7 @@ public class FileManager {
         if (path == null) {
             file = new File(DEFAULT_START_FILE);
             if(file.createNewFile()) {
-                Console.println("-> Create file '" + DEFAULT_START_FILE + "'.");
+                log.info("create file '{}'.", DEFAULT_START_FILE);
             }
         } else {
             file = new File(path);
