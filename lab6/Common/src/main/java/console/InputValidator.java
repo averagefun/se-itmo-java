@@ -1,10 +1,10 @@
 package console;
 
-import exceptions.*;
-import org.jetbrains.annotations.Nullable;
 import data.Color;
 import data.MovieGenre;
 import data.MpaaRating;
+import exceptions.*;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
 import java.util.NoSuchElementException;

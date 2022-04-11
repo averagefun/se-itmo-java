@@ -1,1 +1,2 @@
 Lab6, var 3117500
+mvn build: 'mvn clean compile assembly:single'
