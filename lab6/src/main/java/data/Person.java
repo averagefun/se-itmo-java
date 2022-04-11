@@ -1,6 +1,8 @@
 package data;
 
-public class Person implements Comparable<Person>{
+import java.io.Serializable;
+
+public class Person implements Comparable<Person>, Serializable {
     private final String name;
     private final double weight;
     private final Color hairColor;

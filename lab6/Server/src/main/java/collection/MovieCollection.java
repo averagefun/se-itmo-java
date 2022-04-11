@@ -12,6 +12,7 @@ import exceptions.InvalidArgumentException;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.PriorityQueue;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -45,10 +46,14 @@ public class MovieCollection {
     private void loadJsonFile(FileManager fm, String filePath) {
         try {
             this.pq = fm.readJsonFile(filePath);
-            int maxId = pq.stream()
-                    .max(Comparator.comparing(Movie::getId))
-                    .orElse(new Movie())
-                    .getId();
+
+            // Check for unique ids
+            HashSet<Integer> ids = new HashSet<>();
+            for (Movie m: pq) {
+                if (!ids.add(m.getId()))
+                    throw new InitialFileInvalidValuesException(
+                            "ERROR: -> Movie's ids in json file must have unique values.");
+            }
 
             pq.forEach(movie -> {
                 try {
@@ -59,7 +64,6 @@ public class MovieCollection {
                 }
             });
 
-            Movie.setCounter(maxId);
             this.startFilePath = (filePath != null) ? filePath : FileManager.DEFAULT_START_FILE;
             if (filePath == null) Console.println("-> Using default file '" + FileManager.DEFAULT_START_FILE + "' to save collection.");
             else Console.println("-> Collection with " + pq.size() + " movies was loaded from file '" + startFilePath + "'");
@@ -70,7 +74,11 @@ public class MovieCollection {
             Console.println("ERROR: Program couldn't find json file to load the collection:(");
             System.exit(0);
         } catch (InitialFileInvalidValuesException e) {
-            Console.println("ERROR: -> Json file not loaded.");
+            if (e.getMessage() != null) {
+                Console.println(e.getMessage());
+            } else {
+                Console.println("ERROR: -> Json file not loaded.");
+            }
             System.exit(0);
         }
     }
@@ -98,6 +106,13 @@ public class MovieCollection {
                 .filter(movie -> movie.getId() == id)
                 .findFirst()
                 .orElseThrow(() -> new InvalidArgumentException("Film with id " + id + " not found."));
+    }
+
+    public int getMaxId() {
+        return pq.stream()
+                .max(Comparator.comparing(Movie::getId))
+                .orElse(new Movie())
+                .getId();
     }
 
     /**
@@ -190,7 +205,7 @@ public class MovieCollection {
     /**
      * Global process of input values to add, update, validate Movies
      */
-    public static Movie inputAndUpdateMovie(boolean updMode, Movie movie, boolean printMode, Supplier<String> valueGetter) throws ExecuteScriptFailedException {
+    public static void inputAndUpdateMovie(boolean updMode, Movie movie, boolean printMode, Supplier<String> valueGetter) throws ExecuteScriptFailedException {
         String name = (String) new InputValidator(String.class, false)
                 .loadPreviousValue(updMode, updMode ? movie.getName() : null)
                 .interactiveInput("movie name", printMode, valueGetter);
@@ -248,9 +263,6 @@ public class MovieCollection {
 
         if (updMode) {
             movie.updateMovie(name, coordinates, oscarsCount, movieGenre, mpaaRating, director);
-        } else {
-            movie = new Movie(name, coordinates, oscarsCount, movieGenre, mpaaRating, director);
         }
-        return movie;
     }
 }

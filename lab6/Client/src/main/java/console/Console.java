@@ -10,12 +10,10 @@ import java.util.Scanner;
  */
 public class Console {
     public final Scanner sc;
-    private final Client client;
     private final CommandManager cm;
 
     public Console(Scanner sc, Client client, CommandManager cm) {
         this.sc = sc;
-        this.client = client;
         this.cm = cm;
     }
 

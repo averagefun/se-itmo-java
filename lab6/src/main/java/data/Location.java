@@ -1,6 +1,8 @@
 package data;
 
-public class Location {
+import java.io.Serializable;
+
+public class Location implements Serializable {
     private final Double x; // Поле не может быть null
     private final double y;
     private final String name; // Поле может быть null

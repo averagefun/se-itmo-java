@@ -23,6 +23,7 @@ public class FileManager {
         StringBuilder sb = new StringBuilder();
         String line;
         while ((line = br.readLine()) != null) sb.append(line);
+        isr.close(); br.close();
         return sb.toString();
     }
 
@@ -40,6 +41,7 @@ public class FileManager {
 
         String line;
         while ((line = br.readLine()) != null) q.add(line);
+        isr.close(); br.close();
         return q;
     }
 }

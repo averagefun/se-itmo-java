@@ -1,16 +1,17 @@
 package data;
 
+import exceptions.InvalidRangeException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import exceptions.InvalidRangeException;
 
+import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.Locale;
 
 /**
  * Class represent movie (film) that storage in MovieCollection.
  */
-public class Movie implements Comparable<Movie> {
+public class Movie implements Comparable<Movie>, Serializable {
     private static int counter = 0;
     private final int id;
     private String name;
@@ -46,6 +47,15 @@ public class Movie implements Comparable<Movie> {
         this.movieGenre = movieGenre;
         this.mpaaRating = mpaaRating;
         this.director = director;
+    }
+
+    public void updateMovie(Movie m) {
+        this.name = m.name;
+        this.coordinates = m.coordinates;
+        this.oscarsCount = m.oscarsCount;
+        this.movieGenre = m.movieGenre;
+        this.mpaaRating = m.mpaaRating;
+        this.director = m.director;
     }
 
     /**

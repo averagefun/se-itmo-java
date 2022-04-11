@@ -65,6 +65,7 @@ public class FileManager {
         StringBuilder sb = new StringBuilder();
         String line;
         while ((line = br.readLine()) != null) sb.append(line);
+        isr.close(); br.close();
         return sb.toString();
     }
 

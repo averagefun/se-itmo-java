@@ -1,20 +1,20 @@
+import java.io.*;
+import java.lang.Math;
+
 import collection.MovieCollection;
 import commands.CommandManager;
-import commands.CommandPacket;
+import network.CommandPacket;
 import console.FileManager;
+import network.Common;
+import sun.security.util.ArrayUtil;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
-import java.util.Scanner;
 
 public class Server {
     private final DatagramSocket datagramSocket;
-    private final byte[] buffer = new byte[256];
 
     private final CommandManager cm;
 
@@ -26,28 +26,40 @@ public class Server {
     public void receiveAndAnswer() {
         while(true) {
         try {
-            DatagramPacket datagramPacket = new DatagramPacket(buffer, buffer.length);
+            byte[] sizeArr = new byte[10];
+            DatagramPacket datagramPacket = new DatagramPacket(sizeArr, sizeArr.length);
             datagramSocket.receive(datagramPacket);
-            byte[] data = datagramPacket.getData();
-            ByteArrayInputStream bais = new ByteArrayInputStream(data);
+            int size = 0;
+            for (int i = 0; i < sizeArr.length; i++) {
+                size += sizeArr[i] * Math.pow(10, sizeArr.length-1-i);
+            }
+
+            byte[] buffer = new byte[size];
+            datagramPacket = new DatagramPacket(buffer, buffer.length);
+            datagramSocket.receive(datagramPacket);
+            ByteArrayInputStream bais = new ByteArrayInputStream(buffer);
             ObjectInputStream ois = new ObjectInputStream(bais);
 
-            Object response = ois.readObject();
-            try {
-                if (response.getClass() == CommandPacket.class) {
-                    CommandPacket cp = (CommandPacket) ois.readObject();
-                }
-
-            }
-            if (request instanceof CommandPacket) {
-
-                cm.runCommand((CommandPacket<String>)request);
-            }
-
+            Object receive = ois.readObject();
+            Object objToSend = cm.runCommand((CommandPacket) receive);
 
             InetAddress inetAddress = datagramPacket.getAddress();
             int port = datagramPacket.getPort();
 
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ObjectOutputStream oos = new ObjectOutputStream(baos);
+            oos.writeObject(objToSend);
+
+            buffer = baos.toByteArray();
+            size = buffer.length;
+            sizeArr = new byte[10];
+            for (int i = 0; (i < 10) && (size > 0); i++) {
+                sizeArr[i] = (byte) (size % 10);
+                size /= 10;
+            }
+            ArrayUtil.reverse(sizeArr);
+            datagramPacket = new DatagramPacket(sizeArr, sizeArr.length, inetAddress, port);
+            datagramSocket.send(datagramPacket);
             datagramPacket = new DatagramPacket(buffer, buffer.length, inetAddress, port);
             datagramSocket.send(datagramPacket);
         } catch (IOException | ClassNotFoundException e) {
@@ -66,10 +78,9 @@ public class Server {
             mc = new MovieCollection(fm);
         }
 
-        Scanner sc = new Scanner(System.in);
-        CommandManager cm = new CommandManager(sc, mc, fm);
+        CommandManager cm = new CommandManager(mc, fm);
 
-        DatagramSocket datagramSocket = new DatagramSocket(8000);
+        DatagramSocket datagramSocket = new DatagramSocket(Common.PORT);
         Server server = new Server(datagramSocket, cm);
 
         server.receiveAndAnswer();

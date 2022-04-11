@@ -1,6 +1,8 @@
 package data;
 
-public class Coordinates {
+import java.io.Serializable;
+
+public class Coordinates implements Serializable {
     private final Float x;
     private final long y;
 
