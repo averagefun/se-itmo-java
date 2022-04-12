@@ -10,9 +10,7 @@ import network.Common;
 
 import java.io.IOException;
 import java.time.LocalDate;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.PriorityQueue;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -37,7 +35,7 @@ public class MovieCollection {
      * @param startFilePath path to json file with initial values
      */
     public MovieCollection(FileManager fm, String startFilePath) {
-        this.pq = new PriorityQueue<>();
+        this.pq = new PriorityQueue<>(Comparator.comparing(movie -> movie.getCoordinates().getX()));
         this.initDate = LocalDate.now();
         this.startFilePath = null;
 

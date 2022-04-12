@@ -7,6 +7,7 @@ import network.CommandPacket;
 import network.Common;
 
 import java.io.IOException;
+import java.nio.channels.NoConnectionPendingException;
 import java.util.*;
 import java.util.function.Supplier;
 
@@ -81,6 +82,8 @@ public class CommandManager {
             Console.println(e.getMessage());
         } catch (IOException e) {
             Console.println("Error: file not found.");
+        } catch (NoConnectionPendingException e) {
+            Console.println("Server is not responding. Try to run command later.");
         }
     }
 

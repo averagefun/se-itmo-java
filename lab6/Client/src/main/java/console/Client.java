@@ -2,12 +2,13 @@ package console;
 
 import commands.CommandManager;
 import network.Common;
-import sun.security.util.ArrayUtil;
 
 import java.io.*;
 import java.net.*;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
+import java.nio.channels.NoConnectionPendingException;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 
@@ -17,47 +18,58 @@ public class Client {
 
     public Client(InetAddress inetAddress) throws IOException {
         this.datagramChannel = DatagramChannel.open();
+        datagramChannel.configureBlocking(false);
         this.socketAddress = new InetSocketAddress(inetAddress, Common.PORT);
     }
 
+    private void send(Object objToSend) throws IOException {
+        // send the size of next package
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ObjectOutputStream oos = new ObjectOutputStream(baos);
+        oos.writeObject(objToSend);
+
+        int size = baos.size();
+        byte[] sizeArr = new byte[10];
+        for (int i = 0; (i < 10) && (size > 0); i++) {
+            sizeArr[i] = (byte) (size % 10);
+            size /= 10;
+        }
+
+        ByteBuffer byteBuffer = ByteBuffer.wrap(sizeArr);
+        datagramChannel.send(byteBuffer, socketAddress);
+
+        byteBuffer = ByteBuffer.wrap(baos.toByteArray());
+        datagramChannel.send(byteBuffer, socketAddress);
+        // For helios
+        ((Buffer)byteBuffer).clear();
+    }
+
     public <T extends Serializable> Object sendThenReceive(T objToSend) {
+
         try {
-            // send the size of next package
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ObjectOutputStream oos = new ObjectOutputStream(baos);
-            oos.writeObject(objToSend);
-            int size = baos.size();
+            // cringe, but can be replaced with Thread.sleep()
+            int size = 0;
             byte[] sizeArr = new byte[10];
-            for (int i = 0; (i < 10) && (size > 0); i++) {
-                sizeArr[i] = (byte) (size % 10);
-                size /= 10;
+            for (int i = 0; i < 10000000 && size == 0; i++) {
+                if (i % 2000000 == 0) send(objToSend);
+                datagramChannel.receive(ByteBuffer.wrap(sizeArr));
+                for (int j = 0; j < sizeArr.length; j++) {
+                    size += sizeArr[j] * Math.pow(10, j);
+                }
+                if (i == 5000000) {
+                    Console.println("Trying to connect to the server...");
+                }
             }
-            ArrayUtil.reverse(sizeArr);
 
-            ByteBuffer byteBuffer = ByteBuffer.wrap(sizeArr);
-            datagramChannel.send(byteBuffer, socketAddress);
-
-            byteBuffer = ByteBuffer.wrap(baos.toByteArray());
-            datagramChannel.send(byteBuffer, socketAddress);
-            byteBuffer.clear();
-
-            sizeArr = new byte[10];
-            datagramChannel.socket().setSoTimeout(2000);
-            datagramChannel.receive(ByteBuffer.wrap(sizeArr));
-            size = 0;
-            for (int i = 0; i < sizeArr.length; i++) {
-                size += sizeArr[i] * Math.pow(10, sizeArr.length-1-i);
-            }
+            if (size == 0) throw new NoConnectionPendingException();
 
             byte[] buffer = new byte[size];
             datagramChannel.receive(ByteBuffer.wrap(buffer));
 
             ByteArrayInputStream bais = new ByteArrayInputStream(buffer);
             ObjectInputStream ois = new ObjectInputStream(bais);
-
             return ois.readObject();
-        } catch (IOException | ClassNotFoundException e){
-            e.printStackTrace();
+        } catch (IOException | ClassNotFoundException e) {
             return null;
         }
     }

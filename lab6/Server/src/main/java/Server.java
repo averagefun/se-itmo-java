@@ -6,7 +6,6 @@ import commands.CommandManager;
 import network.CommandPacket;
 import console.FileManager;
 import network.Common;
-import sun.security.util.ArrayUtil;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -32,7 +31,7 @@ public class Server {
             datagramSocket.receive(datagramPacket);
             int size = 0;
             for (int i = 0; i < sizeArr.length; i++) {
-                size += sizeArr[i] * Math.pow(10, sizeArr.length-1-i);
+                size += sizeArr[i] * Math.pow(10, i);
             }
 
             byte[] buffer = new byte[size];
@@ -61,7 +60,7 @@ public class Server {
                 sizeArr[i] = (byte) (size % 10);
                 size /= 10;
             }
-            ArrayUtil.reverse(sizeArr);
+
             datagramPacket = new DatagramPacket(sizeArr, sizeArr.length, inetAddress, port);
             datagramSocket.send(datagramPacket);
             datagramPacket = new DatagramPacket(buffer, buffer.length, inetAddress, port);
