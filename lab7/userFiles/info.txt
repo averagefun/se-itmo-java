@@ -1,0 +1,2 @@
+Lab7, var 3117350
+build project to jar with: 'mvn --projects Server,Client clean compile assembly:single', jar files can be found in target folders
