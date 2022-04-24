@@ -2,15 +2,21 @@ import java.io.*;
 import java.lang.Math;
 
 import collection.MovieCollection;
+import com.google.gson.JsonSyntaxException;
 import commands.CommandManager;
-import network.CommandPacket;
 import console.FileManager;
+import console.JsonParser;
+import database.Database;
+import exceptions.MyExceptions;
+import network.CommandPacket;
 import network.Common;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.sql.SQLException;
+import java.util.HashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,14 +24,14 @@ import org.slf4j.LoggerFactory;
 public class Server {
     private final DatagramSocket datagramSocket;
     private final CommandManager cm;
-    private final Logger log = LoggerFactory.getLogger(Server.class);
+    private final static Logger log = LoggerFactory.getLogger(Server.class);
 
     public Server(DatagramSocket datagramSocket, CommandManager cm) {
         this.datagramSocket = datagramSocket;
         this.cm = cm;
     }
 
-    private void receiveAndAnswer() throws IOException, ClassNotFoundException {
+    private void receiveAndAnswer() throws IOException, ClassNotFoundException, InterruptedException {
             byte[] sizeArr = new byte[10];
             DatagramPacket datagramPacket = new DatagramPacket(sizeArr, sizeArr.length);
             datagramSocket.receive(datagramPacket);
@@ -74,7 +80,7 @@ public class Server {
         while (true) {
             try {
                 receiveAndAnswer();
-            } catch (IOException | ClassNotFoundException e) {
+            } catch (IOException | ClassNotFoundException | InterruptedException e) {
                 e.printStackTrace();
                 break;
             }
@@ -82,19 +88,23 @@ public class Server {
     }
         
 
-    public static void main(String[] args) throws SocketException {
-        FileManager fm = new FileManager();
-
-        MovieCollection mc;
-        if (args.length >= 1) {
-            mc = new MovieCollection(fm, args[0]);
-        } else {
-            mc = new MovieCollection(fm);
+    public static void main(String[] args) throws SocketException, SQLException {
+        JsonParser jp = new JsonParser();
+        HashMap<String, String> config = new HashMap<>();
+        try {
+            String text = FileManager.readFile("config.json");
+            config = jp.jsonToMap(text);
+        } catch (IOException | JsonSyntaxException e) {
+            log.error("failed to load config file:\n{}", MyExceptions.getStringStackTrace(e));
+            System.exit(0);
         }
+        Database db = new Database(config.get("user"), config.get("password"));
 
-        CommandManager cm = new CommandManager(mc, fm);
+        MovieCollection mc = new MovieCollection(db);
+        CommandManager cm = new CommandManager(mc);
 
         DatagramSocket datagramSocket = new DatagramSocket(Common.PORT);
+
         Server server = new Server(datagramSocket, cm);
         server.start();
     }

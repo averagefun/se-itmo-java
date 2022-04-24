@@ -28,7 +28,7 @@ public class Common {
                 .interactiveInput("y (long > -863)", printMode, valueGetter);
         Coordinates coordinates = new Coordinates(x,y);
 
-        int oscarsCount = (int) new InputValidator(int.class, false, 0, Integer.MAX_VALUE)
+        int oscarsCount = (int) new InputValidator(int.class, false, -1, Integer.MAX_VALUE)
                 .loadPreviousValue(updMode, updMode ? movie.getOscarsCount() : null)
                 .interactiveInput("number of Oscars", printMode, valueGetter);
 
@@ -72,7 +72,7 @@ public class Common {
         if (updMode) {
             movie.updateMovie(name, coordinates, oscarsCount, movieGenre, mpaaRating, director);
         } else {
-            movie = new Movie(name, coordinates, oscarsCount, movieGenre, mpaaRating, director);
+            movie = new Movie(0, name, coordinates, oscarsCount, movieGenre, mpaaRating, director);
         }
         return movie;
     }

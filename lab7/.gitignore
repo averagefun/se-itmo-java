@@ -3,3 +3,4 @@ lib/
 target/
 
 ~*.docx
+config.json

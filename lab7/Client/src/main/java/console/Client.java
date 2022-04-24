@@ -40,33 +40,40 @@ public class Client {
 
         byteBuffer = ByteBuffer.wrap(baos.toByteArray());
         datagramChannel.send(byteBuffer, socketAddress);
-        // For helios
-        ((Buffer)byteBuffer).clear();
+        //noinspection RedundantCast
+        ((Buffer)byteBuffer).clear(); // for helios
     }
 
     public <T extends Serializable> Object sendThenReceive(T objToSend) {
 
         try {
-            // cringe, but can be replaced with Thread.sleep()
-            int size = 0;
-            byte[] sizeArr = new byte[10];
-            for (int i = 0; i < 10000000 && size == 0; i++) {
+            ByteBuffer byteBuffer = ByteBuffer.allocate(10);
+            for (int i = 0; i < 10000000; i++) {
                 if (i % 2000000 == 0) send(objToSend);
-                datagramChannel.receive(ByteBuffer.wrap(sizeArr));
-                for (int j = 0; j < sizeArr.length; j++) {
-                    size += sizeArr[j] * Math.pow(10, j);
-                }
+                datagramChannel.receive(byteBuffer);
+                if (byteBuffer.position() != 0) break;
                 if (i == 5000000) {
                     Console.println("Trying to connect to the server...");
                 }
             }
 
-            if (size == 0) throw new NoConnectionPendingException();
+            if (byteBuffer.position() == 0) throw new NoConnectionPendingException();
 
-            byte[] buffer = new byte[size];
-            datagramChannel.receive(ByteBuffer.wrap(buffer));
+            int size = 0;
+            byte[] sizeArr = byteBuffer.array();
+            for (int j = 0; j < sizeArr.length; j++) {
+                size += sizeArr[j] * Math.pow(10, j);
+            }
+            byteBuffer = ByteBuffer.allocate(size);
+            for (int i = 0; i < 10000000; i++) {
+                datagramChannel.receive(byteBuffer);
+                if (byteBuffer.position() != 0) break;
+                if (i == 5000000) {
+                    Console.println("Trying to connect to the server...");
+                }
+            }
 
-            ByteArrayInputStream bais = new ByteArrayInputStream(buffer);
+            ByteArrayInputStream bais = new ByteArrayInputStream(byteBuffer.array());
             ObjectInputStream ois = new ObjectInputStream(bais);
             return ois.readObject();
         } catch (IOException | ClassNotFoundException e) {

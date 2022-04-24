@@ -1,7 +1,6 @@
 package commands;
 
 import collection.MovieCollection;
-import console.FileManager;
 import data.Movie;
 import data.Person;
 import exceptions.CommandNotFindException;
@@ -23,14 +22,12 @@ import org.slf4j.LoggerFactory;
 public class CommandManager {
     private final Map<String, Command> commands;
     private final MovieCollection mc;
-    private final FileManager fm;
     private final Logger log = LoggerFactory.getLogger(MovieCollection.class);
     private String serverCode = "000000";
 
-    public CommandManager(MovieCollection mc, FileManager fm) {
+    public CommandManager(MovieCollection mc) {
         this.commands = new HashMap<>();
         this.mc = mc;
-        this.fm = fm;
 
         initCommands();
     }
@@ -102,13 +99,8 @@ public class CommandManager {
         });
 
         putCommand("add", (argObject) -> {
-            if (argObject instanceof String) {
-                return mc.getMaxId();
-            } else {
-                Movie movie = (Movie) argObject;
-                mc.addMovie(movie);
-                return "Successfully added element!";
-            }
+            Movie movie = (Movie) argObject;
+            return mc.addMovie(movie) ? "Successfully added element!" : "Error occurred while adding element: element did not add.";
         });
 
         putCommand("update", (argObject) -> {
@@ -116,9 +108,7 @@ public class CommandManager {
                 int id = (int) argObject;
                 return mc.getMovieById(id);
             } else {
-                Movie movie = (Movie) argObject;
-                mc.getMovieById(movie.getId()).updateMovie(movie);
-                return "Successfully updated element!";
+                return mc.updateMovie((Movie) argObject) ? "Successfully updated element!" :  "Error occurred while updating element: element did not update.";
             }
         });
 
@@ -128,21 +118,15 @@ public class CommandManager {
         });
 
         putCommand("clear", (arg) -> {
-            mc.clear();
-            return "Collection cleared successfully!";
+            return mc.clear() ? "Collection cleared successfully!" : "Error occurred while cleaning collection: collection did not clean.";
         });
 
         putCommand("add_if_min", (argObject) -> {
-            if (argObject instanceof String) {
-                return mc.getMaxId();
+            Movie movie = (Movie) argObject;
+            if (movie.compareTo(mc.getLowestByOscars()) < 0) {
+                return mc.addMovie(movie) ? "Successfully added element!" : "Error occurred while adding element: element did not add.";
             } else {
-                Movie movie = (Movie) argObject;
-                if (movie.compareTo(mc.getLowestByOscars()) < 0) {
-                    mc.addMovie(movie);
-                    return "Successfully added element!";
-                } else {
-                    return "Element wasn't added to collection because it's not the lowest one.";
-                }
+                return "Element wasn't added to collection because it's not the lowest one.";
             }
         });
 
@@ -201,23 +185,11 @@ public class CommandManager {
         });
 
         // Server command (Admins only)
-        putCommand("ADMIN:save", (argObject) -> {
-            String str = (String) argObject;
-            if (str.equals("request_code")) {
-                return sendRandomCode();
-            } else if (str.equals(serverCode)) {
-                fm.writeToJsonFile(mc.getStartFilePath(), mc);
-                return "Collection saved successfully!";
-            }
-            return "Invalid code: permission denied.";
-        });
-
         putCommand("ADMIN:shutdown_server", (argObject) -> {
             String str = (String) argObject;
             if (str.equals("request_code")) {
                 return sendRandomCode();
             } else if (str.equals(serverCode)) {
-                fm.writeToJsonFile(mc.getStartFilePath(), mc);
                 System.exit(0);
             }
             return "Invalid code: permission denied.";

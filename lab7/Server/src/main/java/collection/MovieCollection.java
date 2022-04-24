@@ -1,18 +1,18 @@
 package collection;
 
-import com.google.gson.JsonSyntaxException;
-import console.FileManager;
 import data.*;
-import exceptions.ExecuteScriptFailedException;
-import exceptions.InitialFileInvalidValuesException;
+import database.Database;
 import exceptions.InvalidArgumentException;
-import network.Common;
 
-import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import exceptions.MyExceptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,66 +22,57 @@ import org.slf4j.LoggerFactory;
 public class MovieCollection {
     private PriorityQueue<Movie> pq;
     private final LocalDate initDate;
+    private final Database db;
     private final Logger log = LoggerFactory.getLogger(MovieCollection.class);
 
-    private String startFilePath;
-
-    public MovieCollection(FileManager fm) {
-        this(fm, null);
-    }
-
     /**
-     * Create MovieCollection and initialize it with values in json file
-     * @param startFilePath path to json file with initial values
+     * Create MovieCollection and initialize it with values from database
      */
-    public MovieCollection(FileManager fm, String startFilePath) {
+    public MovieCollection(Database db) {
         this.pq = new PriorityQueue<>(Comparator.comparing(movie -> movie.getCoordinates().getX()));
         this.initDate = LocalDate.now();
-        this.startFilePath = null;
+        this.db = db;
 
-        // try to initialize values from start file
-        loadJsonFile(fm, startFilePath);
+        // try to initialize values from database
+        try {
+            int n = initMoviesFromDB();
+            if (n > 0)
+                log.info("load {} movies from database", n);
+            else
+                log.info("database collection is empty, so no movies loaded");
+        } catch (SQLException e) {
+            StringWriter sw = new StringWriter();
+            PrintWriter pw = new PrintWriter(sw);
+            e.printStackTrace(pw);
+            log.error("failed to load collection from database:\n{}", sw);
+        }
     }
 
-    private void loadJsonFile(FileManager fm, String filePath) {
-        try {
-            this.pq = fm.readJsonFile(filePath);
-
-            // Check for unique ids
-            HashSet<Integer> ids = new HashSet<>();
-            for (Movie m: pq) {
-                if (!ids.add(m.getId()))
-                    throw new InitialFileInvalidValuesException(
-                            "movie's ids in json file must have unique values.");
-            }
-
-            pq.forEach(movie -> {
-                try {
-                    Common.inputAndUpdateMovie(true, movie, false, () -> "#validate_initial");
-                } catch (ExecuteScriptFailedException e) {
-                    if (e.getMessage() != null) log.warn(e.getMessage());
-                    pq = new PriorityQueue<>();
-                    throw new InitialFileInvalidValuesException();
-                }
-            });
-
-            this.startFilePath = (filePath != null) ? filePath : FileManager.DEFAULT_START_FILE;
-            if (filePath == null) log.info("using default file '{}' to save collection", FileManager.DEFAULT_START_FILE);
-            else log.info("collection with {} movies was loaded from file '{}'", pq.size(), startFilePath);
-        } catch (JsonSyntaxException e) {
-            log.error("syntax error in json file. File not loaded.");
-            System.exit(0);
-        } catch (IOException e) {
-            log.error("program couldn't find json file to load the collection:(");
-            System.exit(0);
-        } catch (InitialFileInvalidValuesException e) {
-            if (e.getMessage() != null) {
-                log.error(e.getMessage());
-            } else {
-                log.error("json file not loaded.");
-            }
-            System.exit(0);
+    private int initMoviesFromDB() throws SQLException {
+        ResultSet m = db.executeQuery(
+                "SELECT movies.id AS id, movies.name AS name, coordinates.x AS c_x, coordinates.y AS c_y,\n" +
+                        "       movies.creation_date AS creation_date, movies.oscars_count AS oscars_count,\n" +
+                        "       movies.movie_genre AS movie_genre, movies.mpaa_rating AS mpaa_rating,\n" +
+                        "       persons.name AS p_name, persons.weight AS p_weight, persons.hair_color AS p_color,\n" +
+                        "       locations.name AS l_name, locations.x AS l_x, locations.y AS l_y FROM movies\n" +
+                        "JOIN coordinates on movies.coordinates = coordinates.id\n" +
+                        "JOIN persons on movies.director = persons.id\n" +
+                        "JOIN locations on persons.location = locations.id");
+        int i;
+        for (i = 0; m.next(); i++) {
+            Movie movie = new Movie(
+                    m.getInt("id"),
+                    m.getString("name"),
+                    new Coordinates(m.getFloat("c_x"), m.getLong("c_y")),
+                    m.getInt("oscars_count"),
+                    MovieGenre.valueOf(m.getString("movie_genre")),
+                    m.getString("mpaa_rating") != null ? MpaaRating.valueOf(m.getString("mpaa_rating")) : null,
+                    new Person(m.getString("p_name"), m.getDouble("p_weight"), Color.valueOf(m.getString("p_color")),
+                            new Location(m.getDouble("l_x"), m.getDouble("l_y"), m.getString("l_name")))
+                    );
+            pq.add(movie);
         }
+        return i;
     }
 
     public int size() {
@@ -90,10 +81,6 @@ public class MovieCollection {
 
     public PriorityQueue<Movie> getPQ() {
         return pq;
-    }
-
-    public String getStartFilePath() {
-        return startFilePath;
     }
 
     /**
@@ -109,13 +96,6 @@ public class MovieCollection {
                 .orElseThrow(() -> new InvalidArgumentException("Film with id " + id + " not found."));
     }
 
-    public int getMaxId() {
-        return pq.stream()
-                .max(Comparator.comparing(Movie::getId))
-                .orElse(new Movie())
-                .getId();
-    }
-
     /**
      * Get the Lowest Movie (by OscarsCount) in collection
      * @return Movie if movie found OR null if movie not found
@@ -129,9 +109,75 @@ public class MovieCollection {
     /**
      * Add new Movie in collection
      * @param m Movie to add
+     * @return true in case of successful adding else false
      */
-    public void addMovie(Movie m){
-        pq.add(m);
+    public boolean addMovie(Movie m){
+        try {
+            ResultSet rs = db.executeQuery("INSERT INTO coordinates (x, y) VALUES (?, ?) RETURNING id",
+                    m.getCoordinates().getX(), m.getCoordinates().getY());
+            rs.next();
+            int coordinatesId = rs.getInt("id");
+            db.closeStmt();
+
+            rs = db.executeQuery("INSERT INTO locations (x, y, name) VALUES (?, ?, ?) RETURNING id",
+                    m.getDirector().getLocation().getX(), m.getDirector().getLocation().getY(),
+                    m.getDirector().getLocation().getName());
+            rs.next();
+            int locationsId = rs.getInt("id");
+            db.closeStmt();
+
+            rs = db.executeQuery("INSERT INTO persons (name, weight, hair_color, location) VALUES (?, ?, ?, ?) RETURNING id",
+                    m.getDirector().getName(), m.getDirector().getWeight(), m.getDirector().getHairColor(), locationsId);
+            rs.next();
+            int personsId = rs.getInt("id");
+            db.closeStmt();
+
+            rs = db.executeQuery("INSERT INTO movies (name, coordinates, creation_date, oscars_count, movie_genre, mpaa_rating, director)" +
+                            " VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
+                    m.getName(), coordinatesId, m.getCreationDate(), m.getOscarsCount(), m.getMovieGenre(), m.getMpaaRating(), personsId);
+            rs.next();
+            m.setId(rs.getInt("id"));
+            pq.add(m);
+            return true;
+        } catch (SQLException e) {
+            log.error("SQLException occurred while adding movie:\n{}", MyExceptions.getStringStackTrace(e));
+            return false;
+        }
+    }
+
+    public boolean updateMovie(Movie m) throws InvalidArgumentException {
+        int movieId = m.getId();
+        try {
+            ResultSet rs = db.executeQuery(
+                    "SELECT movies.coordinates AS coordinates, movies.director AS director, persons.location AS location FROM movies\n" +
+                    "JOIN persons on movies.director = persons.id WHERE movies.id = ?", movieId);
+            rs.next();
+            int coordinatesId = rs.getInt("coordinates");
+            int directorId = rs.getInt("director");
+            int locationId = rs.getInt("location");
+            db.closeStmt();
+
+            db.executeUpdate("UPDATE coordinates SET x = ?, y = ? WHERE id = ?",
+                    m.getCoordinates().getX(), m.getCoordinates().getY(), coordinatesId);
+
+            db.executeUpdate("UPDATE locations SET x = ?, y = ?, name = ? WHERE id = ?",
+                    m.getDirector().getLocation().getX(), m.getDirector().getLocation().getY(),
+                    m.getDirector().getLocation().getName(), locationId);
+
+            db.executeUpdate("UPDATE persons SET name = ?, weight = ?, hair_color = ? WHERE id = ?",
+                    m.getDirector().getName(), m.getDirector().getWeight(), m.getDirector().getHairColor(), directorId);
+
+            db.executeUpdate("UPDATE movies SET name = ?, oscars_count = ?, movie_genre = ?, mpaa_rating = ? WHERE id = ?",
+                    m.getName(), m.getOscarsCount(), m.getMovieGenre(), m.getMpaaRating(), movieId);
+            rs.next();
+            m.setId(rs.getInt("id"));
+
+            getMovieById(movieId).updateMovie(m);
+            return true;
+        } catch (SQLException e) {
+            log.error("SQLException occurred while updating movie:\n{}", MyExceptions.getStringStackTrace(e));
+            return false;
+        }
     }
 
     /**
@@ -140,11 +186,17 @@ public class MovieCollection {
      * @return true if Movie was in collection OR false if Movie wasn't in collection (so nothing will be removed)
      */
     public boolean removeMovieById(int id) {
-        int oldSize = pq.size();
-        pq = pq.stream()
-                .filter(movie -> movie.getId() != id)
-                .collect(Collectors.toCollection(PriorityQueue<Movie>::new));
-        return oldSize != pq.size();
+        try {
+            int n = db.executeUpdate("DELETE FROM movies WHERE id = ?", id);
+            int oldSize = pq.size();
+            pq = pq.stream()
+                    .filter(movie -> movie.getId() != id)
+                    .collect(Collectors.toCollection(PriorityQueue<Movie>::new));
+            return n > 1 || oldSize != pq.size();
+        } catch (SQLException e) {
+            log.error("SQLException occurred while deleting movie:\n{}", MyExceptions.getStringStackTrace(e));
+            return false;
+        }
     }
 
     /**
@@ -180,8 +232,15 @@ public class MovieCollection {
     /**
      * Clear all Movies in collection
      */
-    public void clear() {
-        pq.clear();
+    public boolean clear() {
+        try {
+            db.executeUpdate("DELETE FROM movies");
+            pq.clear();
+            return true;
+        } catch (SQLException e) {
+            log.error("SQLException occurred while cleaning collection:\n{}", MyExceptions.getStringStackTrace(e));
+            return false;
+        }
     }
 
     @Override

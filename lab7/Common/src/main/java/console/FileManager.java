@@ -16,7 +16,7 @@ public class FileManager {
      * @return String of file content
      * @throws IOException raise if file not found
      */
-    public String readFile(String path) throws IOException {
+    public static String readFile(String path) throws IOException {
         InputStreamReader isr = new InputStreamReader(new FileInputStream(path), StandardCharsets.UTF_8);
         BufferedReader br = new BufferedReader(isr);
 
@@ -33,7 +33,7 @@ public class FileManager {
      * @return Queue of String (each row - element)
      * @throws IOException raise if file not found
      */
-    public Queue<String> readCommandFile(String path) throws IOException {
+    public static Queue<String> readCommandFile(String path) throws IOException {
         InputStreamReader isr = new InputStreamReader(new FileInputStream(path), StandardCharsets.UTF_8);
         BufferedReader br = new BufferedReader(isr);
 

@@ -1,6 +1,5 @@
 package data;
 
-import exceptions.InvalidRangeException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -12,8 +11,7 @@ import java.util.Locale;
  * Class represent movie (film) that storage in MovieCollection.
  */
 public class Movie implements Comparable<Movie>, Serializable {
-    private static int counter = 0;
-    private final int id;
+    private int id;
     private String name;
     private Coordinates coordinates;
     private final LocalDate creationDate;
@@ -23,13 +21,11 @@ public class Movie implements Comparable<Movie>, Serializable {
     private Person director;
 
     public Movie() {
-        this.id = 0;
         this.creationDate = LocalDate.now();
     }
 
     public Movie(@NotNull String name, @NotNull Coordinates coordinates, int oscarsCount, @NotNull MovieGenre movieGenre,
                  @Nullable MpaaRating mpaaRating, @Nullable Person director) {
-        this.id = ++counter;
         this.name = name;
         this.coordinates = coordinates;
         this.creationDate = LocalDate.now();
@@ -37,6 +33,12 @@ public class Movie implements Comparable<Movie>, Serializable {
         this.movieGenre = movieGenre;
         this.mpaaRating = mpaaRating;
         this.director = director;
+    }
+
+    public Movie(int id, @NotNull String name, @NotNull Coordinates coordinates, int oscarsCount, @NotNull MovieGenre movieGenre,
+                 @Nullable MpaaRating mpaaRating, @Nullable Person director) {
+        this(name, coordinates, oscarsCount, movieGenre, mpaaRating, director);
+        this.id = id;
     }
 
     public void updateMovie(@NotNull String name, @NotNull Coordinates coordinates, int oscarsCount, @NotNull MovieGenre movieGenre,
@@ -50,21 +52,7 @@ public class Movie implements Comparable<Movie>, Serializable {
     }
 
     public void updateMovie(Movie m) {
-        this.name = m.name;
-        this.coordinates = m.coordinates;
-        this.oscarsCount = m.oscarsCount;
-        this.movieGenre = m.movieGenre;
-        this.mpaaRating = m.mpaaRating;
-        this.director = m.director;
-    }
-
-    /**
-     * Set counter of all Movie instances
-     * @param c must be larger than previous because of unique
-     */
-    public static void setCounter(int c){
-        if (c < counter) throw new InvalidRangeException("New counter must be bigger than previous!");
-        counter = c;
+        updateMovie(m.name, m.coordinates, m.oscarsCount, m.movieGenre, m.mpaaRating, m.director);
     }
 
     public int getId() {
@@ -97,6 +85,10 @@ public class Movie implements Comparable<Movie>, Serializable {
 
     public Person getDirector() {
         return director;
+    }
+
+    public void setId(int id) {
+        this.id = id;
     }
 
     /**
