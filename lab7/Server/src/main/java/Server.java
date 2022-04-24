@@ -32,22 +32,14 @@ public class Server {
     }
 
     private void receiveAndAnswer() throws IOException, ClassNotFoundException, InterruptedException {
-            byte[] sizeArr = new byte[10];
-            DatagramPacket datagramPacket = new DatagramPacket(sizeArr, sizeArr.length);
-            datagramSocket.receive(datagramPacket);
-            int size = 0;
-            for (int i = 0; i < sizeArr.length; i++) {
-                size += sizeArr[i] * Math.pow(10, i);
-            }
-
-            byte[] buffer = new byte[size];
-            datagramPacket = new DatagramPacket(buffer, buffer.length);
+            byte[] buffer = new byte[1000];
+            DatagramPacket datagramPacket = new DatagramPacket(buffer, buffer.length);
             datagramSocket.receive(datagramPacket);
 
             InetAddress inetAddress = datagramPacket.getAddress();
             int port = datagramPacket.getPort();
 
-            log.info("received {} bytes of data from {}:{}", size, inetAddress, port);
+            log.info("received data from {}:{}", inetAddress, port);
 
             ByteArrayInputStream bais = new ByteArrayInputStream(buffer);
             ObjectInputStream ois = new ObjectInputStream(bais);
@@ -60,15 +52,7 @@ public class Server {
             oos.writeObject(objToSend);
 
             buffer = baos.toByteArray();
-            size = buffer.length;
-            sizeArr = new byte[10];
-            for (int i = 0; (i < 10) && (size > 0); i++) {
-                sizeArr[i] = (byte) (size % 10);
-                size /= 10;
-            }
 
-            datagramPacket = new DatagramPacket(sizeArr, sizeArr.length, inetAddress, port);
-            datagramSocket.send(datagramPacket);
             datagramPacket = new DatagramPacket(buffer, buffer.length, inetAddress, port);
             datagramSocket.send(datagramPacket);
 

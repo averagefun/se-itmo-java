@@ -20,20 +20,17 @@ public class CommandManager {
     private final Scanner sc;
     private final Client client;
 
-    private final FileManager fm;
-
     private boolean printMode;
     private Supplier<String> valueGetter;
 
     private final HashSet<MyFile> fileHistory;
 
 
-    public CommandManager(Scanner sc, Client client, FileManager fm) {
+    public CommandManager(Scanner sc, Client client) {
         this.sc = sc;
         this.commands = new HashMap<>();
         this.descriptions = new HashMap<>();
         this.client = client;
-        this.fm = fm;
 
         this.printMode = true;
         this.valueGetter = sc::nextLine;
@@ -105,7 +102,7 @@ public class CommandManager {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder("Here is command list:\n*");
+        StringBuilder sb = new StringBuilder("All available commands:\n*");
         for (String key: descriptions.keySet()) {
             sb.append(key).append(": ").append(descriptions.get(key)).append("\n*");
         }
@@ -135,6 +132,7 @@ public class CommandManager {
     
     private void initCommands(){
         putCommand("help", "get information about all available commands", (name, arg) -> {
+
             Console.println(this);
             return null;
         });
@@ -192,7 +190,7 @@ public class CommandManager {
             if (!fileHistory.add(myFile)) {
                 throw new FileRecursionException("File '" + filePath + "' referring to itself.");
             }
-            Queue<String> q = fm.readCommandFile(filePath);
+            Queue<String> q = FileManager.readCommandFile(filePath);
             offPrintMode(q);
 
             while (q.peek() != null) {

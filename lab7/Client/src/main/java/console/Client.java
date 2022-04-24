@@ -23,60 +23,36 @@ public class Client {
     }
 
     private void send(Object objToSend) throws IOException {
-        // send the size of next package
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         ObjectOutputStream oos = new ObjectOutputStream(baos);
         oos.writeObject(objToSend);
 
-        int size = baos.size();
-        byte[] sizeArr = new byte[10];
-        for (int i = 0; (i < 10) && (size > 0); i++) {
-            sizeArr[i] = (byte) (size % 10);
-            size /= 10;
-        }
-
-        ByteBuffer byteBuffer = ByteBuffer.wrap(sizeArr);
-        datagramChannel.send(byteBuffer, socketAddress);
-
-        byteBuffer = ByteBuffer.wrap(baos.toByteArray());
-        datagramChannel.send(byteBuffer, socketAddress);
-        //noinspection RedundantCast
-        ((Buffer)byteBuffer).clear(); // for helios
+        datagramChannel.send(ByteBuffer.wrap(baos.toByteArray()), socketAddress);
     }
 
     public <T extends Serializable> Object sendThenReceive(T objToSend) {
 
         try {
-            ByteBuffer byteBuffer = ByteBuffer.allocate(10);
-            for (int i = 0; i < 10000000; i++) {
-                if (i % 2000000 == 0) send(objToSend);
-                datagramChannel.receive(byteBuffer);
-                if (byteBuffer.position() != 0) break;
-                if (i == 5000000) {
+            ByteBuffer byteBuffer = ByteBuffer.allocate(1000);
+
+            F: for (int i = 0; i < 80; i++) {
+                if (i%5==0) send(objToSend);
+                for (int j = 0; j<10; j++) {
+                    datagramChannel.receive(byteBuffer);
+                    if (byteBuffer.position() != 0) break F;
+                }
+                if (i == 40) {
                     Console.println("Trying to connect to the server...");
                 }
+                Thread.sleep(150);
             }
 
             if (byteBuffer.position() == 0) throw new NoConnectionPendingException();
 
-            int size = 0;
-            byte[] sizeArr = byteBuffer.array();
-            for (int j = 0; j < sizeArr.length; j++) {
-                size += sizeArr[j] * Math.pow(10, j);
-            }
-            byteBuffer = ByteBuffer.allocate(size);
-            for (int i = 0; i < 10000000; i++) {
-                datagramChannel.receive(byteBuffer);
-                if (byteBuffer.position() != 0) break;
-                if (i == 5000000) {
-                    Console.println("Trying to connect to the server...");
-                }
-            }
-
             ByteArrayInputStream bais = new ByteArrayInputStream(byteBuffer.array());
             ObjectInputStream ois = new ObjectInputStream(bais);
             return ois.readObject();
-        } catch (IOException | ClassNotFoundException e) {
+        } catch (IOException | ClassNotFoundException | InterruptedException e) {
             return null;
         }
     }
@@ -113,8 +89,7 @@ public class Client {
         Client client = new Client(inetAddress);
 
         Scanner sc = new Scanner(System.in);
-        FileManager fm = new FileManager();
-        CommandManager cm = new CommandManager(sc, client, fm);
+        CommandManager cm = new CommandManager(sc, client);
 
         client.interactiveMode(sc, cm);
     }
