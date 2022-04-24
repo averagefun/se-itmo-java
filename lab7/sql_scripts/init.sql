@@ -47,8 +47,7 @@ create table users
             primary key,
     username varchar(255) unique,
     password varchar(255),
-    salt varchar(127),
-    two_factor bool default false
+    salt varchar(127)
 );
 
 create table movies

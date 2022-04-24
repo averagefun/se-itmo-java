@@ -82,10 +82,10 @@ public class Server {
             log.error("failed to load config file:\n{}", MyExceptions.getStringStackTrace(e));
             System.exit(0);
         }
-        Database db = new Database(config.get("user"), config.get("password"));
+        Database db = new Database(config.get("user"), config.get("password"), config.get("db_salt"));
 
         MovieCollection mc = new MovieCollection(db);
-        CommandManager cm = new CommandManager(mc);
+        CommandManager cm = new CommandManager(mc, db);
 
         DatagramSocket datagramSocket = new DatagramSocket(Common.PORT);
 

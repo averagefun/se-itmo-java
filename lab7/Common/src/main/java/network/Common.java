@@ -3,6 +3,7 @@ package network;
 import console.Console;
 import console.InputValidator;
 import data.*;
+import exceptions.CommandInterruptedException;
 import exceptions.ExecuteScriptFailedException;
 
 import java.util.function.Supplier;
@@ -13,7 +14,8 @@ public class Common {
     /**
      * Global process of input values to add, update, validate Movies
      */
-    public static Movie inputAndUpdateMovie(boolean updMode, Movie movie, boolean printMode, Supplier<String> valueGetter) throws ExecuteScriptFailedException {
+    public static Movie inputAndUpdateMovie(boolean updMode, Movie movie, boolean printMode, Supplier<String> valueGetter)
+            throws ExecuteScriptFailedException, CommandInterruptedException {
         String name = (String) new InputValidator(String.class, false)
                 .loadPreviousValue(updMode, updMode ? movie.getName() : null)
                 .interactiveInput("movie name", printMode, valueGetter);

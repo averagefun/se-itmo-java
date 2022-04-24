@@ -8,11 +8,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class Database {
+    private final Connection connection;
+    private PreparedStatement stmt;
+    private final String dbSalt;
     private final Logger log = LoggerFactory.getLogger(Database.class);
-    Connection connection;
-    PreparedStatement stmt;
 
-    public Database(String user, String password) throws SQLException {
+    public Database(String user, String password, String dbSalt) throws SQLException {
         try {
             Class.forName("org.postgresql.Driver");
         } catch (ClassNotFoundException e) {
@@ -20,6 +21,11 @@ public class Database {
         }
         String url = "jdbc:postgresql://localhost:5432/postgres";
         connection = DriverManager.getConnection(url, user, password);
+        this.dbSalt = dbSalt;
+    }
+
+    public String getDbSalt() {
+        return dbSalt;
     }
 
     private PreparedStatement parseSql(String sql, Object[] args) throws SQLException {
@@ -62,7 +68,7 @@ public class Database {
         return stmt.executeQuery();
     }
 
-    public void closeStmt() throws SQLException {
+    public void closeQuery() throws SQLException {
         stmt.close();
     }
 

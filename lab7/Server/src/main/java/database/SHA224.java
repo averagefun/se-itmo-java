@@ -10,20 +10,19 @@ public class SHA224 {
     private MessageDigest md;
     private String userSalt; // len = 32
 
-    public SHA224() {
+    public SHA224(String dbSalt) {
         try {
             md = MessageDigest.getInstance("SHA-224");
-            byte[] genSalt = generateSalt();
-            userSalt = byteToString(genSalt);
-            md.update(generateSalt());
+            userSalt = generateSalt();
+            md.update((dbSalt + userSalt).getBytes(StandardCharsets.UTF_8));
         } catch (NoSuchAlgorithmException ignored) {}
     }
 
-    public SHA224(String userSalt) {
+    public SHA224(String dbSalt, String userSalt) {
         try {
             this.userSalt = userSalt;
             md = MessageDigest.getInstance("SHA-224");
-            md.update(userSalt.getBytes(StandardCharsets.UTF_8));
+            md.update((dbSalt + userSalt).getBytes(StandardCharsets.UTF_8));
         } catch (NoSuchAlgorithmException ignored) {}
     }
 
@@ -36,11 +35,11 @@ public class SHA224 {
         return byteToString(messageDigest);
     }
 
-    private byte[] generateSalt() {
+    private String generateSalt() {
         SecureRandom random = new SecureRandom();
         byte[] salt = new byte[16];
         random.nextBytes(salt);
-        return salt;
+        return byteToString(salt);
     }
 
     private String byteToString(byte[] byteArr) {

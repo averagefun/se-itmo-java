@@ -111,73 +111,64 @@ public class MovieCollection {
      * @param m Movie to add
      * @return true in case of successful adding else false
      */
-    public boolean addMovie(Movie m){
-        try {
-            ResultSet rs = db.executeQuery("INSERT INTO coordinates (x, y) VALUES (?, ?) RETURNING id",
-                    m.getCoordinates().getX(), m.getCoordinates().getY());
-            rs.next();
-            int coordinatesId = rs.getInt("id");
-            db.closeStmt();
+    public boolean addMovie(Movie m, int userId) throws SQLException {
+        ResultSet rs = db.executeQuery("INSERT INTO coordinates (x, y) VALUES (?, ?) RETURNING id",
+                m.getCoordinates().getX(), m.getCoordinates().getY());
+        rs.next();
+        int coordinatesId = rs.getInt("id");
+        db.closeQuery();
 
-            rs = db.executeQuery("INSERT INTO locations (x, y, name) VALUES (?, ?, ?) RETURNING id",
-                    m.getDirector().getLocation().getX(), m.getDirector().getLocation().getY(),
-                    m.getDirector().getLocation().getName());
-            rs.next();
-            int locationsId = rs.getInt("id");
-            db.closeStmt();
+        rs = db.executeQuery("INSERT INTO locations (x, y, name) VALUES (?, ?, ?) RETURNING id",
+                m.getDirector().getLocation().getX(), m.getDirector().getLocation().getY(),
+                m.getDirector().getLocation().getName());
+        rs.next();
+        int locationsId = rs.getInt("id");
+        db.closeQuery();
 
-            rs = db.executeQuery("INSERT INTO persons (name, weight, hair_color, location) VALUES (?, ?, ?, ?) RETURNING id",
-                    m.getDirector().getName(), m.getDirector().getWeight(), m.getDirector().getHairColor(), locationsId);
-            rs.next();
-            int personsId = rs.getInt("id");
-            db.closeStmt();
+        rs = db.executeQuery("INSERT INTO persons (name, weight, hair_color, location) VALUES (?, ?, ?, ?) RETURNING id",
+                m.getDirector().getName(), m.getDirector().getWeight(), m.getDirector().getHairColor(), locationsId);
+        rs.next();
+        int personsId = rs.getInt("id");
+        db.closeQuery();
 
-            rs = db.executeQuery("INSERT INTO movies (name, coordinates, creation_date, oscars_count, movie_genre, mpaa_rating, director)" +
-                            " VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
-                    m.getName(), coordinatesId, m.getCreationDate(), m.getOscarsCount(), m.getMovieGenre(), m.getMpaaRating(), personsId);
-            rs.next();
-            m.setId(rs.getInt("id"));
-            pq.add(m);
-            return true;
-        } catch (SQLException e) {
-            log.error("SQLException occurred while adding movie:\n{}", MyExceptions.getStringStackTrace(e));
-            return false;
-        }
+        rs = db.executeQuery("INSERT INTO movies (name, user_id, coordinates, creation_date, oscars_count, movie_genre, mpaa_rating, director)" +
+                        " VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
+                m.getName(), userId, coordinatesId, m.getCreationDate(), m.getOscarsCount(), m.getMovieGenre(), m.getMpaaRating(), personsId);
+        rs.next();
+        m.setId(rs.getInt("id"));
+        return pq.add(m);
     }
 
-    public boolean updateMovie(Movie m) throws InvalidArgumentException {
+    public boolean updateMovie(Movie m, int userId) throws InvalidArgumentException, SQLException {
         int movieId = m.getId();
-        try {
-            ResultSet rs = db.executeQuery(
-                    "SELECT movies.coordinates AS coordinates, movies.director AS director, persons.location AS location FROM movies\n" +
-                    "JOIN persons on movies.director = persons.id WHERE movies.id = ?", movieId);
-            rs.next();
-            int coordinatesId = rs.getInt("coordinates");
-            int directorId = rs.getInt("director");
-            int locationId = rs.getInt("location");
-            db.closeStmt();
+        ResultSet rs = db.executeQuery(
+                "SELECT movies.coordinates AS coordinates, movies.user_id AS user_id, movies.director AS director, persons.location AS location FROM movies\n" +
+                "JOIN persons on movies.director = persons.id WHERE movies.id = ?", movieId);
+        rs.next();
+        int dbUserId = rs.getInt("user_id");
+        if (userId != dbUserId) return false;
+        int coordinatesId = rs.getInt("coordinates");
+        int directorId = rs.getInt("director");
+        int locationId = rs.getInt("location");
+        db.closeQuery();
 
-            db.executeUpdate("UPDATE coordinates SET x = ?, y = ? WHERE id = ?",
-                    m.getCoordinates().getX(), m.getCoordinates().getY(), coordinatesId);
+        db.executeUpdate("UPDATE coordinates SET x = ?, y = ? WHERE id = ?",
+                m.getCoordinates().getX(), m.getCoordinates().getY(), coordinatesId);
 
-            db.executeUpdate("UPDATE locations SET x = ?, y = ?, name = ? WHERE id = ?",
-                    m.getDirector().getLocation().getX(), m.getDirector().getLocation().getY(),
-                    m.getDirector().getLocation().getName(), locationId);
+        db.executeUpdate("UPDATE locations SET x = ?, y = ?, name = ? WHERE id = ?",
+                m.getDirector().getLocation().getX(), m.getDirector().getLocation().getY(),
+                m.getDirector().getLocation().getName(), locationId);
 
-            db.executeUpdate("UPDATE persons SET name = ?, weight = ?, hair_color = ? WHERE id = ?",
-                    m.getDirector().getName(), m.getDirector().getWeight(), m.getDirector().getHairColor(), directorId);
+        db.executeUpdate("UPDATE persons SET name = ?, weight = ?, hair_color = ? WHERE id = ?",
+                m.getDirector().getName(), m.getDirector().getWeight(), m.getDirector().getHairColor(), directorId);
 
-            db.executeUpdate("UPDATE movies SET name = ?, oscars_count = ?, movie_genre = ?, mpaa_rating = ? WHERE id = ?",
-                    m.getName(), m.getOscarsCount(), m.getMovieGenre(), m.getMpaaRating(), movieId);
-            rs.next();
-            m.setId(rs.getInt("id"));
+        db.executeUpdate("UPDATE movies SET name = ?, oscars_count = ?, movie_genre = ?, mpaa_rating = ? WHERE id = ?",
+                m.getName(), m.getOscarsCount(), m.getMovieGenre(), m.getMpaaRating(), movieId);
+        rs.next();
+        m.setId(rs.getInt("id"));
 
-            getMovieById(movieId).updateMovie(m);
-            return true;
-        } catch (SQLException e) {
-            log.error("SQLException occurred while updating movie:\n{}", MyExceptions.getStringStackTrace(e));
-            return false;
-        }
+        getMovieById(movieId).updateMovie(m);
+        return true;
     }
 
     /**
@@ -185,18 +176,15 @@ public class MovieCollection {
      * @param id id of Movie that will be removed
      * @return true if Movie was in collection OR false if Movie wasn't in collection (so nothing will be removed)
      */
-    public boolean removeMovieById(int id) {
-        try {
-            int n = db.executeUpdate("DELETE FROM movies WHERE id = ?", id);
-            int oldSize = pq.size();
+    public boolean removeMovieById(int id, int userId) throws SQLException {
+        int n = db.executeUpdate("DELETE FROM movies WHERE id = ? AND user_id = ?", id, userId);
+        if (n > 0) {
             pq = pq.stream()
                     .filter(movie -> movie.getId() != id)
                     .collect(Collectors.toCollection(PriorityQueue<Movie>::new));
-            return n > 1 || oldSize != pq.size();
-        } catch (SQLException e) {
-            log.error("SQLException occurred while deleting movie:\n{}", MyExceptions.getStringStackTrace(e));
-            return false;
+            return true;
         }
+        return false;
     }
 
     /**
@@ -205,13 +193,11 @@ public class MovieCollection {
      * @return true if Movie was in collection OR false if Movie wasn't in collection (so nothing will be removed)
      * @throws InvalidArgumentException if argument not specified or has wrong format
      */
-    public boolean removeGreater(int id) throws InvalidArgumentException {
+    public boolean removeGreater(int id, int userId) throws InvalidArgumentException, SQLException {
         Movie m = getMovieById(id);
-        int oldSize = pq.size();
-        pq = pq.stream()
-                .filter(movie -> movie.compareTo(m) <= 0)
-                .collect(Collectors.toCollection(PriorityQueue<Movie>::new));
-        return oldSize != pq.size();
+        int n = db.executeUpdate("DELETE FROM movies WHERE user_id = ? AND id > ?", userId, m.getId());
+        initMoviesFromDB();
+        return n > 0;
     }
 
     /**
@@ -220,22 +206,20 @@ public class MovieCollection {
      * @return true if Movie was in collection OR false if Movie wasn't in collection (so nothing will be removed)
      * @throws InvalidArgumentException if argument not specified or has wrong format
      */
-    public boolean removeLower(int id) throws InvalidArgumentException {
+    public boolean removeLower(int id, int userId) throws SQLException, InvalidArgumentException {
         Movie m = getMovieById(id);
-        int oldSize = pq.size();
-        pq = pq.stream()
-                .filter(movie -> movie.compareTo(m) >= 0)
-                .collect(Collectors.toCollection(PriorityQueue<Movie>::new));
-        return oldSize != pq.size();
+        int n = db.executeUpdate("DELETE FROM movies WHERE user_id = ? AND id < ?", userId, m.getId());
+        initMoviesFromDB();
+        return n > 0;
     }
 
     /**
      * Clear all Movies in collection
      */
-    public boolean clear() {
+    public boolean clear(int userId) {
         try {
-            db.executeUpdate("DELETE FROM movies");
-            pq.clear();
+            db.executeUpdate("DELETE FROM movies WHERE user_id = ?", userId);
+            initMoviesFromDB();
             return true;
         } catch (SQLException e) {
             log.error("SQLException occurred while cleaning collection:\n{}", MyExceptions.getStringStackTrace(e));

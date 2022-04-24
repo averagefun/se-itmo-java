@@ -56,7 +56,7 @@ public class InputValidator {
      * @return Object, cast to specified type
      * @throws ExecuteScriptFailedException exception show validate error while execute_script
      */
-    public Object interactiveInput(String text, boolean printMode, Supplier<String> valueGetter) throws ExecuteScriptFailedException {
+    public Object interactiveInput(String text, boolean printMode, Supplier<String> valueGetter) throws ExecuteScriptFailedException, CommandInterruptedException {
         if (printMode) {
             String strInsert = "";
             if (updateMode) {
@@ -64,12 +64,8 @@ public class InputValidator {
             }
             while (true) {
                 Console.print("Type " + text + strInsert + " >>> ");
-                String input = "";
-                try {
-                    input = valueGetter.get();
-                } catch (NoSuchElementException e) {
-                    System.exit(0);
-                }
+                String input;
+                input = valueGetter.get();
                 if (prevValue != null && input.equals("<")) return prevValue;
 
                 try {

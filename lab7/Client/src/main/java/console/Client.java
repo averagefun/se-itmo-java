@@ -5,7 +5,6 @@ import network.Common;
 
 import java.io.*;
 import java.net.*;
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.NoConnectionPendingException;
@@ -15,11 +14,39 @@ import java.util.Scanner;
 public class Client {
     private final DatagramChannel datagramChannel;
     private final SocketAddress socketAddress;
+    private boolean isAuthorized;
+    private String username;
+    private String password;
 
     public Client(InetAddress inetAddress) throws IOException {
         this.datagramChannel = DatagramChannel.open();
-        datagramChannel.configureBlocking(false);
+        this.datagramChannel.configureBlocking(false);
         this.socketAddress = new InetSocketAddress(inetAddress, Common.PORT);
+        this.isAuthorized = false;
+    }
+
+    public boolean isAuthorized() {
+        return isAuthorized;
+    }
+
+    public void setAuthorized(boolean isAuthorized) {
+        this.isAuthorized = isAuthorized;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     private void send(Object objToSend) throws IOException {
@@ -31,7 +58,6 @@ public class Client {
     }
 
     public <T extends Serializable> Object sendThenReceive(T objToSend) {
-
         try {
             ByteBuffer byteBuffer = ByteBuffer.allocate(1000);
 
@@ -63,7 +89,7 @@ public class Client {
     public void interactiveMode(Scanner sc, CommandManager cm) {
         //noinspection InfiniteLoopStatement
         while(true) {
-            Console.print("$ ");
+            Console.print(isAuthorized ? ("$ [" + username + "] ")  : "$ ");
             String[] input = {};
             try {
                 input = sc.nextLine().trim().split(" ");
@@ -84,6 +110,7 @@ public class Client {
 
     public static void main(String[] args) throws IOException {
         Console.println("Welcome to client app. Enter command or type 'help'.");
+        Console.println("You can sign in or create account with commands 'sign_in', 'sign_up'");
 
         InetAddress inetAddress = InetAddress.getByName("localhost");
         Client client = new Client(inetAddress);
