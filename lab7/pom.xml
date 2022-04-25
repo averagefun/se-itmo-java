@@ -7,7 +7,7 @@
     <groupId>ru.ifmo.se</groupId>
     <artifactId>lab7</artifactId>
     <packaging>pom</packaging>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0</version>
     <modules>
         <module>Server</module>
         <module>Client</module>

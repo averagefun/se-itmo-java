@@ -4,22 +4,18 @@ import org.intellij.lang.annotations.Language;
 import java.sql.*;
 import java.time.LocalDate;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 public class Database {
     private final Connection connection;
     private PreparedStatement stmt;
     private final String dbSalt;
-    private final Logger log = LoggerFactory.getLogger(Database.class);
 
-    public Database(String user, String password, String dbSalt) throws SQLException {
+    public Database(String host, String dbName, String user, String password, String dbSalt) throws SQLException {
         try {
             Class.forName("org.postgresql.Driver");
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
-        String url = "jdbc:postgresql://localhost:5432/postgres";
+        String url = String.format("jdbc:postgresql://%s:5432/%s", host, dbName);
         connection = DriverManager.getConnection(url, user, password);
         this.dbSalt = dbSalt;
     }

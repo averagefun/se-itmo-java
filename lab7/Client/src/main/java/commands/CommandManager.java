@@ -69,10 +69,10 @@ public class CommandManager {
     public void runCommand(String name, String arg) {
         try {
             Command command = getCommand(name);
-            if (command == null) throw new CommandNotFindException("Command not find.");
+            if (command == null) throw new CommandNotFindException("Command not found.");
             if (onlyAuthorized.get(name) && !client.isAuthorized()) {
                 Console.println("This command is allowed only for authorized users. " +
-                        "(Try 'sign_up' to create new account, more information in 'help')");
+                        "(Try '/sign_in' or '/sign_up' to log in or create new account)");
             } else {
                 String result = getCommand(name).run(name, arg);
                 if (result != null) console.printlnMode(result);
@@ -98,20 +98,28 @@ public class CommandManager {
         runCommand(name, null);
     }
 
-    private Object getObjectFromServer(String name, int count) {
-        return getObjectFromServer(name, count, null);
+    private Object getObjectFromServer(String name) {
+        return getObjectFromServer(name, null, 0);
     }
 
-    private <T extends Serializable> Object getObjectFromServer(String name, int count, T arg) {
+    private <T extends Serializable> Object getObjectFromServer(String name, T arg) {
+        return getObjectFromServer(name, arg, 0);
+    }
+
+    private <T extends Serializable> Object getObjectFromServer(String name, T arg, int count) {
         return client.sendThenReceive(new CommandPacket(name, count, arg, client.getUsername(), client.getPassword()));
     }
 
-    private String getStringFromServer(String name, int count) {
-        return (String) getObjectFromServer(name, count);
+    private String getStringFromServer(String name) {
+        return (String) getObjectFromServer(name);
     }
 
-    private <T extends Serializable> String getStringFromServer(String name, int count, T arg) {
-        return (String) getObjectFromServer(name, count, arg);
+    private <T extends Serializable> String getStringFromServer(String name, T arg) {
+        return (String) getObjectFromServer(name, arg);
+    }
+
+    private <T extends Serializable> String getStringFromServer(String name, T arg, @SuppressWarnings("SameParameterValue") int count) {
+        return (String) getObjectFromServer(name, arg, count);
     }
 
     private void setPrintMode() {
@@ -147,13 +155,13 @@ public class CommandManager {
         });
 
         putCommand("info", false,"get information about movies collection (type, data, size)", (name, arg) -> {
-            Console.println(getStringFromServer(name, 0));
+            Console.println(getStringFromServer(name));
             return null;
         });
 
         putCommand("show", false,"show all movies OR argument -> {id}, show specific movie", (name, arg) -> {
             Integer id = (arg!=null) ? intValidator(arg) : null;
-            Console.println(getStringFromServer(name, 0, id));
+            Console.println(getStringFromServer(name, id));
             return null;
         });
 
@@ -174,67 +182,79 @@ public class CommandManager {
         });
 
         putCommand("print_unique_oscars_count", false,"print all unique values of oscars count in collection", (name, arg) ->
-                getStringFromServer(name, 0));
+                getStringFromServer(name));
 
-        putCommand("sign_in", false,"sign in to account", (name, arg) -> {
+        putCommand("/sign_in", false,"sign in to account", (name, arg) -> {
+            if (client.isAuthorized()) {
+                return "To sign in another account, you need to log out from current account ('/sign_out').";
+            }
             console.printMode("Enter username: ");
             String username = console.readLine();
             if (username.isEmpty()) {
                 return "Username can't be empty.";
             }
-            String answer = getStringFromServer(name, 0, username);
+            String answer = getStringFromServer(name, username);
             if (!answer.equals("success")) {
                 return answer;
             }
-            client.setUsername(username);
             console.printMode("Enter password [keep empty if no password set]: ");
-            client.setPassword(console.readLine());
-            answer = getStringFromServer(name, 1, username + "::" + client.getPassword());
+            String password = console.readLine();
+            answer = getStringFromServer(name, username + "::" + password, 1);
             if (answer.equals("success")) {
-                client.setAuthorized(true);
-                return "You have successfully logged in as " + username + "!";
+                client.setUsername(username);
+                client.setPassword(password);
+                client.authorize();
+                return "You have successfully logged in as " + username + ".";
             }
             return answer;
         });
 
-        putCommand("sign_up", false,"create new account", (name, arg) -> {
-                console.printMode("Create a username: ");
-                String username;
-                while (true) {
-                    username = console.readLine();
-                    if (username.isEmpty()) {
-                        console.printlnMode("Username can't be empty.");
-                    } else {
-                        String answer = getStringFromServer(name, 0, username);
-                        if (answer.equals("success")) break;
-                        console.printlnMode(answer);
-                    }
-                    console.printMode("Create new username: ");
+        putCommand("/sign_up", false,"create new account", (name, arg) -> {
+            if (client.isAuthorized()) {
+                return "To sign up, you need to log out from current account ('/sign_out').";
+            }
+            console.printMode("Create a username: ");
+            String username;
+            while (true) {
+                username = console.readLine();
+                if (username.isEmpty()) {
+                    console.printlnMode("Username can't be empty.");
+                } else {
+                    String answer = getStringFromServer(name, username);
+                    if (answer.equals("success")) break;
+                    console.printlnMode(answer);
                 }
+                console.printMode("Create new username: ");
+            }
+            console.printMode("Enter password [keep empty if you don't want password]: ");
+            String password;
+            while(true) {
+                password = console.readLine();
+                console.printMode("Repeat password [keep empty if you don't want password]: ");
+                if (console.readLine().equals(password)) {
+                    break;
+                }
+                console.printMode("Passwords do not match. Enter password again: ");
+            }
+            String answer = getStringFromServer(name, username + "::" + password, 1);
+            if (answer.equals("success")) {
                 client.setUsername(username);
-                console.printMode("Enter password [keep empty if you don't want password]: ");
-                String password;
-                while(true) {
-                    password = console.readLine();
-                    console.printMode("Repeat password [keep empty if you don't want password]: ");
-                    if (console.readLine().equals(password)) {
-                        client.setPassword(password);
-                        break;
-                    }
-                    console.printMode("Passwords do not match. Enter password again: ");
-                }
-                String answer = getStringFromServer("sign_up", 1, username + "::" + password);
-                if (answer.equals("success")) {
-                    client.setAuthorized(true);
-                    return "You have successfully create account and logged in as " + username + "!";
-                }
-                return answer;
+                client.setPassword(password);
+                client.authorize();
+                return "You have successfully create account and logged in as " + username + ".";
+            }
+            return answer;
+        });
+
+        putCommand("/sign_out", true, "sign out from account", (name, arg) -> {
+            client.signOut();
+            return "You have successfully sign out.";
         });
 
         putCommand("add", true,"add movie to collection", (name, arg) -> {
             console.printlnMode("To add movie lead the instruction below:");
             Movie movie = Common.inputAndUpdateMovie(false, null, console.isPrintMode(), valueGetter);
-            return getStringFromServer(name, 0, movie);
+            return getStringFromServer(name, movie);
         });
 
         putCommand("update", true,"argument -> {id}, update movie by id", (name, arg) -> {
@@ -247,7 +267,7 @@ public class CommandManager {
                 Movie oldMovie = (Movie) response;
                 console.printlnMode("To update movie lead the instruction below, to save previous value type '<':");
                 Movie movie = Common.inputAndUpdateMovie(true, oldMovie, console.isPrintMode(), valueGetter);
-                return getStringFromServer(name, 0, movie);
+                return getStringFromServer(name, movie, 1);
             }
         });
 
@@ -257,7 +277,7 @@ public class CommandManager {
         });
 
         putCommand("clear", true,"clear collection", (name, arg) ->
-                getStringFromServer(name, 0));
+                getStringFromServer(name));
 
         putCommand("execute_script", true,"argument -> {file_name}, execute script file", (name, arg) -> {
             String filePath;
@@ -298,7 +318,7 @@ public class CommandManager {
         putCommand("add_if_min", true, "add movie if it oscars count lower that the other collection", (name, arg) -> {
             console.printlnMode("To add movie lead the instruction below:");
             Movie movie = Common.inputAndUpdateMovie(false, null, console.isPrintMode(), valueGetter);
-            return getStringFromServer(name, 0, movie);
+            return getStringFromServer(name, movie);
         });
 
         putCommand("remove_greater", true,"argument -> {id}, remove from collection all movies if its oscars count greater than current movie", (name, arg) -> {

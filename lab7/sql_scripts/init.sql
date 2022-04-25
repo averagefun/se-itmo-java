@@ -55,7 +55,7 @@ create table movies
     id serial
         constraint movies_pk
             primary key,
-    user_id int constraint movies_users_id_fk
+    user_id int not null constraint movies_users_id_fk
         references users (id)
         on update cascade on delete cascade,
     name varchar(255) not null,

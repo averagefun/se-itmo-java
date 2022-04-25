@@ -67,7 +67,7 @@ public class CommandManager {
                 log.debug("processing command '{}': command not found.", cp.getName());
                 throw new CommandNotFindException("Command not found.");
             } else if (onlyAuthorized.get(cp.getName())) {
-                if (cp.getUsername().isEmpty())
+                if (cp.getUsername() == null || cp.getUsername().isEmpty())
                     throw new AuthorizationException("Authorization error: to run this command you need to be authorized.");
                 ResultSet rs = db.executeQuery("SELECT id, salt FROM users WHERE username = ?", cp.getUsername());
                 rs.next();
@@ -84,7 +84,12 @@ public class CommandManager {
                     throw new AuthorizationException("Authorization error: wrong login or password.");
                 }
             }
-            return command.run( userId, cp.getCount(), cp.getArg());
+            if (userId == 0 && cp.getUsername() != null && !cp.getUsername().isEmpty()) {
+                ResultSet rs = db.executeQuery("SELECT id FROM users WHERE username = ?", cp.getUsername());
+                rs.next();
+                userId = rs.getInt(1);
+            }
+            return command.run(userId, cp.getCount(), cp.getArg());
         } catch (NullPointerException e) {
             log.debug("processing command '{}': command did not run successfully, problem detected.", cp.getName());
             return "Command did not run successfully, problem detected.";
@@ -97,13 +102,13 @@ public class CommandManager {
             return "Error: file not found";
         } catch (SQLException e) {
             log.error(MyExceptions.getStringStackTrace(e));
-            return "Some problems detected with databases. Please try command later.";
+            return "Some problems detected with database. Please try command later.";
         }
         return null;
     }
 
     private void initCommands(){
-        putCommand("sign_in", false, (userId, count, argObject) -> {
+        putCommand("/sign_in", false, (userId, count, argObject) -> {
             if (count == 0) {
                 ResultSet rs = db.executeQuery("SELECT exists(SELECT 1 FROM users WHERE username = ?)", argObject);
                 rs.next();
@@ -138,7 +143,7 @@ public class CommandManager {
             }
         });
 
-        putCommand("sign_up", false, (userId, count, argObject) -> {
+        putCommand("/sign_up", false, (userId, count, argObject) -> {
             if (count == 0) {
                 ResultSet rs = db.executeQuery("SELECT exists(SELECT 1 FROM users WHERE username = ?)", argObject);
                 rs.next();
@@ -166,17 +171,46 @@ public class CommandManager {
         putCommand("info", false, (userId, count, argObject) -> mc.getInfo());
 
         putCommand("show", false, (userId, count, argObject) -> {
-            if (argObject == null) return mc.toString();
-            else {
+            if (argObject == null) {
+                ResultSet rs = db.executeQuery(
+                        "SELECT movies.id AS movie_id, movies.user_id AS user_id, users.username AS username" +
+                                " FROM movies INNER JOIN users on movies.user_id = users.id ORDER BY movies.id DESC");
+                StringBuilder sb = new StringBuilder("All movies in collection:\n");
+                sb.append("| ID |      MOVIE NAME |   AUTHOR NAME |\n");
+                boolean isEmpty = true;
+                while (rs.next()) {
+                    isEmpty = false;
+                    int movieId = rs.getInt("movie_id");
+                    int authorId = rs.getInt("user_id");
+                    String authorUsername = rs.getString("username");
+                    Movie m = mc.getMovieById(movieId);
+                    String row = String.format(Locale.US, "| %2d | %15s | %13s |",
+                            m.getId(),
+                            m.getName().length() <= 15 ? m.getName() : m.getName().substring(0, 15),
+                            authorUsername.length() <= 13 ? authorUsername : authorUsername.substring(0, 13));
+                    if (userId == authorId) row += " <-";
+                    sb.append(row).append("\n");
+                }
+                db.closeQuery();
+                if (isEmpty) return "Collection is empty.";
+                return sb.toString();
+            } else {
                 int id = (int) argObject;
                 Movie m = mc.getMovieById(id);
+
+                ResultSet rs = db.executeQuery(
+                        "SELECT users.username FROM movies INNER JOIN users on movies.user_id = users.id " +
+                                "WHERE movies.id = ?", m.getId());
+                rs.next();
+                String authorUsername = rs.getString(1);
+                db.closeQuery();
 
                 // Format creating date
                 final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd.MMMM.yyyy", Locale.US);
 
-                return String.format("Id: %d\nName: %s\nCoordinates:\n\tx: %f\n\ty: %d\nCreation Date: %s\nOscarsCount: %d\nMovieGenre: %s\nMpaaRating: %s\n" +
+                return String.format("Author: %s\nId: %d\nName: %s\nCoordinates:\n\tx: %f\n\ty: %d\nCreation Date: %s\nOscarsCount: %d\nMovieGenre: %s\nMpaaRating: %s\n" +
                                 "Director:\n\tName: %s\n\tweight: %f\n\tHairColor: %s\n\tLocation:\n\t\tx: %f\n\t\ty: %f\n\t\tName: %s\n",
-                        m.getId(), m.getName(), m.getCoordinates().getX(), m.getCoordinates().getY(),
+                        authorUsername, m.getId(), m.getName(), m.getCoordinates().getX(), m.getCoordinates().getY(),
                         m.getCreationDate().format(dtf), m.getOscarsCount(), m.getMovieGenre(), m.getMpaaRating(), m.getDirector().getName(),
                         m.getDirector().getWeight(), m.getDirector().getHairColor(), m.getDirector().getLocation().getX(),
                         m.getDirector().getLocation().getY(), m.getDirector().getLocation().getName());
@@ -191,9 +225,18 @@ public class CommandManager {
         putCommand("update", true, (userId, count, argObject) -> {
             if (count == 0) {
                 int id = (int) argObject;
-                return mc.getMovieById(id);
+                Movie m = mc.getMovieById(id);
+                ResultSet rs = db.executeQuery("SELECT user_id FROM movies WHERE id = ?", m.getId());
+                rs.next();
+                int dbUserId = rs.getInt(1);
+                db.closeQuery();
+                if (userId != dbUserId) {
+                    return "Permission denied: you have no rights to edit this film.";
+                } else {
+                    return m;
+                }
             } else {
-                return mc.updateMovie((Movie) argObject, userId) ? "Successfully updated element!" :  "Error with update movie: permission denied.";
+                return mc.updateMovie((Movie) argObject, userId) ? "Successfully updated element!" :  "Error occurred while updating movie.";
             }
         });
 
@@ -232,8 +275,10 @@ public class CommandManager {
             if (subCollection.isEmpty()) {
                 return "Films with less oscars was not found.";
             } else {
-                StringBuilder sb = new StringBuilder("ID OSCARS NAME");
-                subCollection.forEach(movie -> sb.append(String.format(Locale.US, "%2d %6d %s\n", movie.getId(), movie.getOscarsCount(), movie.getName())));
+                StringBuilder sb = new StringBuilder("| ID | OSCARS |      MOVIE NAME |\n");
+                subCollection.forEach(movie -> sb.append(
+                        String.format(Locale.US, "| %2d | %6d | %15s |\n", movie.getId(), movie.getOscarsCount(),
+                               movie.getName().length() <= 15 ? movie.getName() : movie.getName().substring(0, 15))));
                 return sb.toString();
             }
         });
@@ -248,8 +293,11 @@ public class CommandManager {
             if (subCollection.isEmpty()) {
                 return "Films with greater directors was not found.";
             } else {
-                StringBuilder sb = new StringBuilder("ID DIRECTOR NAME");
-                subCollection.forEach(movie -> sb.append(String.format(Locale.US, "%2d %8.2f %s\n", movie.getId(), movie.getDirector().getWeight(), movie.getName())));
+                StringBuilder sb = new StringBuilder("| ID | DIRECTOR |      MOVIE NAME |\n");
+                subCollection.forEach(
+                        movie -> sb.append(String.format(Locale.US, "| %2d | %8.2f | %15s |\n",
+                                movie.getId(), movie.getDirector().getWeight(),
+                                movie.getName().length() <= 15 ? movie.getName() : movie.getName().substring(0, 15))));
                 return sb.toString();
             }
         });

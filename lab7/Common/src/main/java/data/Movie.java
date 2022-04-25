@@ -20,10 +20,6 @@ public class Movie implements Comparable<Movie>, Serializable {
     private MpaaRating mpaaRating;
     private Person director;
 
-    public Movie() {
-        this.creationDate = LocalDate.now();
-    }
-
     public Movie(@NotNull String name, @NotNull Coordinates coordinates, int oscarsCount, @NotNull MovieGenre movieGenre,
                  @Nullable MpaaRating mpaaRating, @Nullable Person director) {
         this.name = name;

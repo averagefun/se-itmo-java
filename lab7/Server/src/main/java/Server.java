@@ -1,5 +1,4 @@
 import java.io.*;
-import java.lang.Math;
 
 import collection.MovieCollection;
 import com.google.gson.JsonSyntaxException;
@@ -32,7 +31,7 @@ public class Server {
     }
 
     private void receiveAndAnswer() throws IOException, ClassNotFoundException, InterruptedException {
-            byte[] buffer = new byte[1000];
+            byte[] buffer = new byte[10000];
             DatagramPacket datagramPacket = new DatagramPacket(buffer, buffer.length);
             datagramSocket.receive(datagramPacket);
 
@@ -70,19 +69,28 @@ public class Server {
             }
         }
     }
-        
 
-    public static void main(String[] args) throws SocketException, SQLException {
+    public static void main(String[] args) throws SocketException {
         JsonParser jp = new JsonParser();
         HashMap<String, String> config = new HashMap<>();
         try {
-            String text = FileManager.readFile("config.json");
+            String configFile = "config.json";
+            if (args.length > 0 && args[0].equals("helios")) configFile = "config_helios.json";
+            String text = new FileManager().readResourcesFile(configFile);
             config = jp.jsonToMap(text);
         } catch (IOException | JsonSyntaxException e) {
             log.error("failed to load config file:\n{}", MyExceptions.getStringStackTrace(e));
             System.exit(0);
         }
-        Database db = new Database(config.get("user"), config.get("password"), config.get("db_salt"));
+
+        Database db = null;
+        try {
+            db = new Database(config.get("host"), config.get("db_name"),
+                    config.get("user"), config.get("password"), config.get("db_salt"));
+        } catch (SQLException e) {
+            log.error("database connection error:\n{}", MyExceptions.getStringStackTrace(e));
+            System.exit(0);
+        }
 
         MovieCollection mc = new MovieCollection(db);
         CommandManager cm = new CommandManager(mc, db);

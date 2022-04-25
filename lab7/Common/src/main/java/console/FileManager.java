@@ -10,14 +10,8 @@ import java.util.Queue;
  */
 public class FileManager {
 
-    /**
-     * Read file to string
-     * @param path path to file
-     * @return String of file content
-     * @throws IOException raise if file not found
-     */
-    public static String readFile(String path) throws IOException {
-        InputStreamReader isr = new InputStreamReader(new FileInputStream(path), StandardCharsets.UTF_8);
+    public static String readFile(InputStream is) throws IOException {
+        InputStreamReader isr = new InputStreamReader(is);
         BufferedReader br = new BufferedReader(isr);
 
         StringBuilder sb = new StringBuilder();
@@ -26,6 +20,7 @@ public class FileManager {
         isr.close(); br.close();
         return sb.toString();
     }
+
 
     /**
      * Read file to Queue
@@ -43,5 +38,14 @@ public class FileManager {
         while ((line = br.readLine()) != null) q.add(line);
         isr.close(); br.close();
         return q;
+    }
+
+    public String readResourcesFile(String fileName) throws IOException {
+        // Getting ClassLoader obj
+        ClassLoader classLoader = this.getClass().getClassLoader();
+        // Getting resource(File) from class loader
+        InputStream is = classLoader.getResourceAsStream(fileName);
+
+        return readFile(is);
     }
 }

@@ -1,6 +1,7 @@
 package console;
 
 import commands.CommandManager;
+import exceptions.AuthorizationException;
 import network.Common;
 
 import java.io.*;
@@ -29,8 +30,17 @@ public class Client {
         return isAuthorized;
     }
 
-    public void setAuthorized(boolean isAuthorized) {
-        this.isAuthorized = isAuthorized;
+    public void authorize() {
+        if (username == null || password == null) {
+            throw new AuthorizationException("To authorize you need to set username and password (may be empty).");
+        }
+        isAuthorized = true;
+    }
+
+    public void signOut() {
+        username = null;
+        password = null;
+        isAuthorized = false;
     }
 
     public String getUsername() {
@@ -59,7 +69,7 @@ public class Client {
 
     public <T extends Serializable> Object sendThenReceive(T objToSend) {
         try {
-            ByteBuffer byteBuffer = ByteBuffer.allocate(1000);
+            ByteBuffer byteBuffer = ByteBuffer.allocate(10000);
 
             F: for (int i = 0; i < 80; i++) {
                 if (i%5==0) send(objToSend);
@@ -110,7 +120,7 @@ public class Client {
 
     public static void main(String[] args) throws IOException {
         Console.println("Welcome to client app. Enter command or type 'help'.");
-        Console.println("You can sign in or create account with commands 'sign_in', 'sign_up'");
+        Console.println("You can sign in or create new account with commands '/sign_in', '/sign_up'.");
 
         InetAddress inetAddress = InetAddress.getByName("localhost");
         Client client = new Client(inetAddress);
