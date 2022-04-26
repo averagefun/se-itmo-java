@@ -21,7 +21,6 @@ public class FileManager {
         return sb.toString();
     }
 
-
     /**
      * Read file to Queue
      * @param path path to file

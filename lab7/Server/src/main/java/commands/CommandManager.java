@@ -4,7 +4,7 @@ import collection.MovieCollection;
 import data.Movie;
 import data.Person;
 import database.Database;
-import database.SHA224;
+import console.SHA224;
 import exceptions.*;
 import network.CommandPacket;
 
@@ -158,7 +158,7 @@ public class CommandManager {
                 String[] data = ((String) argObject).split("::");
                 String username = data[0], password = "";
                 if (data.length == 2) password = data[1];
-                SHA224 sha = new SHA224(db.getDbSalt());
+                SHA224 sha = new SHA224(db.getDbSalt(), true);
                 String userSalt = sha.getUserSalt();
                 int n = db.executeUpdate(
                         "INSERT INTO users (username, password, salt) VALUES (?, ?, ?)",

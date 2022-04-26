@@ -199,6 +199,10 @@ public class CommandManager {
             }
             console.printMode("Enter password [keep empty if no password set]: ");
             String password = console.readLine();
+
+            String salt = new FileManager().readResourcesFile("config.txt");
+            SHA224 sha224 = new SHA224(salt, false);
+            password = sha224.getHashString(password);
             answer = getStringFromServer(name, username + "::" + password, 1);
             if (answer.equals("success")) {
                 client.setUsername(username);
@@ -236,6 +240,9 @@ public class CommandManager {
                 }
                 console.printMode("Passwords do not match. Enter password again: ");
             }
+            String salt = new FileManager().readResourcesFile("config.txt");
+            SHA224 sha224 = new SHA224(salt, false);
+            password = sha224.getHashString(password);
             String answer = getStringFromServer(name, username + "::" + password, 1);
             if (answer.equals("success")) {
                 client.setUsername(username);

@@ -5,3 +5,4 @@ target/
 ~*.docx
 config.json
 config_helios.json
+config.txt

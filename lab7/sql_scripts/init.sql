@@ -1,5 +1,5 @@
 -- ATTENTION: DROP ALL TABLES
--- drop table coordinates, locations, persons, users;
+-- drop table coordinates, locations, persons, movies, users;
 
 -- CREATE ENUMS TYPES
 -- create type color as ENUM ('RED', 'BLUE', 'YELLOW', 'ORANGE', 'WHITE');
