@@ -1,11 +1,9 @@
 import java.io.*;
 
 import collection.MovieCollection;
-import com.google.gson.JsonSyntaxException;
 import commands.CommandManager;
 import console.ClientData;
-import console.FileManager;
-import console.JsonParser;
+import console.Console;
 import database.Database;
 import exceptions.MyExceptions;
 import network.CommandPacket;
@@ -17,8 +15,7 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.sql.SQLException;
 import java.util.*;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,14 +24,14 @@ public class Server {
     private final DatagramSocket datagramSocket;
     private final CommandManager cm;
     private final static Logger log = LoggerFactory.getLogger(Server.class);
-    private final Queue<ClientData> queueToProcess;
-    private final Queue<ClientData> queueToSend;
+    private final BlockingQueue<ClientData> queueToProcess;
+    private final BlockingQueue<ClientData> queueToSend;
 
     public Server(DatagramSocket datagramSocket, CommandManager cm) {
         this.datagramSocket = datagramSocket;
         this.cm = cm;
-        this.queueToProcess = new ArrayDeque<>();
-        this.queueToSend = new ArrayDeque<>();
+        this.queueToProcess = new LinkedBlockingQueue<>();
+        this.queueToSend = new LinkedBlockingQueue<>();
     }
 
     private void readRequest() throws IOException {
@@ -55,48 +52,39 @@ public class Server {
 
                     ClientData cd = new ClientData(inetAddress, port, ois.readObject());
                     queueToProcess.add(cd);
+                    log.debug("{} finished reading command", Thread.currentThread().getName());
                 } catch (IOException | ClassNotFoundException ignored) {}
             }).start();
     }
 
-    public void process() {
-        while (!queueToProcess.isEmpty()) {
-            Executor executor = Executors.newFixedThreadPool(10);
-            ClientData cd = queueToProcess.poll();
-            executor.execute(() -> {
-                log.debug("{} started processing command", Thread.currentThread().getName());
-                assert cd != null;
-                ClientData newCd = new ClientData(cd.getInetAddress(), cd.getPort(),
-                        cm.runCommand((CommandPacket) cd.getData()));
-                queueToSend.add(newCd);
-            });
-        }
+    public void process(ClientData cd) {
+        log.debug("{} started processing command", Thread.currentThread().getName());
+        ClientData newCd = new ClientData(cd.getInetAddress(), cd.getPort(),
+                cm.runCommand((CommandPacket) cd.getData()));
+        queueToSend.add(newCd);
+        log.debug("{} finished processing command", Thread.currentThread().getName());
     }
 
-    public void sendToClient () {
-        while (!queueToSend.isEmpty()) {
-            Executor executor = Executors.newFixedThreadPool(10);
-            ClientData cd = queueToSend.poll();
-            executor.execute(() -> {
-                log.debug("{} started sending result to client", Thread.currentThread().getName());
-                try {
-                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                    ObjectOutputStream oos = new ObjectOutputStream(baos);
-                    assert cd != null;
-                    oos.writeObject(cd.getData());
-                    byte[] sendBuffer = baos.toByteArray();
+    public void sendToClient(ClientData cd) {
+        log.debug("{} started sending result to client", Thread.currentThread().getName());
+        try {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ObjectOutputStream oos = new ObjectOutputStream(baos);
+            oos.writeObject(cd.getData());
+            byte[] sendBuffer = baos.toByteArray();
 
-                    DatagramPacket sendDatagramPacket = new DatagramPacket(sendBuffer, sendBuffer.length,
-                            cd.getInetAddress(), cd.getPort());
-                    datagramSocket.send(sendDatagramPacket);
-                    log.info("send {} bytes of data to {}:{}", sendBuffer.length, cd.getInetAddress(), cd.getPort());
-                } catch (IOException ignored) {}
-            });
+            DatagramPacket sendDatagramPacket = new DatagramPacket(sendBuffer, sendBuffer.length,
+                    cd.getInetAddress(), cd.getPort());
+            datagramSocket.send(sendDatagramPacket);
+            log.info("send {} bytes of data to {}:{}", sendBuffer.length, cd.getInetAddress(), cd.getPort());
+        } catch (IOException ignored) {
         }
+        log.debug("{} finished sending result to client", Thread.currentThread().getName());
+
     }
 
     public void startShell(Scanner sc, Thread processor, Thread sender) {
-        log.info("successfully started server shell: type 'exit' to safely shut down server.");
+        log.info("successfully started server shell: type 'exit' to safely shut down server");
         while(true) {
             String input = "";
             try {
@@ -108,35 +96,41 @@ public class Server {
                 processor.interrupt();
                 sender.interrupt();
 
-                while (processor.isAlive() && sender.isAlive()) {
-                    log.info("shut downing server...");
+                log.info("shut downing server...");
+
+                int i;
+                for (i = 0; processor.isAlive() || sender.isAlive(); i++) {
+                    try {
+                        //noinspection BusyWait
+                        Thread.sleep(300);
+                    } catch (InterruptedException ignored) {}
+                    if (i%10==4) Console.print(".");
                 }
-                log.info("successfully shut down");
-                System.exit(0);
+                if (i >= 4) Console.println();
+
+                try {
+                    cm.getDb().closeConnection();
+                    log.info("successfully closed database connection");
+                } catch (SQLException e) {
+                    log.error("closing connection failed:\n{}", MyExceptions.getStringStackTrace(e));
+                }
+                log.info("finishing process...");
+                break;
+            }
+            else {
+                log.warn("unknown command");
             }
         }
     }
 
     public static void main(String[] args) {
-        JsonParser jp = new JsonParser();
-        HashMap<String, String> config;
-        try {
-            String configFile = "config.json";
-            if (args.length > 0 && args[0].equals("helios")) configFile = "config_helios.json";
-            String text = new FileManager().readResourcesFile(configFile);
-            config = jp.jsonToMap(text);
-            log.info("successfully loaded config file '{}'", configFile);
-        } catch (NullPointerException | IOException | JsonSyntaxException e) {
-            log.error("failed to load config file:\n{}", MyExceptions.getStringStackTrace(e));
-            return;
-        }
+        String configFile = "db.cfg";
+        if (args.length > 0 && args[0].equals("helios")) configFile = "db_helios.cfg";
 
         Database db;
         try {
-            db = new Database(config.get("host"), config.get("db_name"),
-                    config.get("user"), config.get("password"), config.get("db_salt"));
-            log.info("successfully connected to a database '{}'", config.get("db_name"));
-        } catch (SQLException e) {
+            db = new Database(configFile);
+        } catch (SQLException | IOException e) {
             log.error("database connection error:\n{}", MyExceptions.getStringStackTrace(e));
             return;
         }
@@ -153,6 +147,7 @@ public class Server {
         }
 
         Server server = new Server(datagramSocket, cm);
+        log.info("successfully started listening requests at port {}", Common.PORT);
 
         Thread receiver = new Thread(() -> {
             while (true) {
@@ -161,18 +156,33 @@ public class Server {
                 } catch (IOException ignored) {}
             }
         });
+        receiver.setDaemon(true);
         receiver.start(); // start receiving and processing requests
 
         Thread processor = new Thread(() -> {
-            while (!Thread.currentThread().isInterrupted()) {
-                server.process();
+            ExecutorService executorService = Executors.newFixedThreadPool(10);
+            while (true) {
+                try {
+                    ClientData cd = server.queueToProcess.take();
+                    executorService.execute(() -> server.process(cd));
+                } catch (InterruptedException e) {
+                    executorService.shutdown();
+                    break;
+                }
             }
         });
         processor.start();
 
         Thread sender = new Thread(() -> {
-            while (!Thread.currentThread().isInterrupted()) {
-                server.sendToClient();
+            ExecutorService executorService = Executors.newFixedThreadPool(10);
+            while (true) {
+                try {
+                    ClientData cd = server.queueToSend.take();
+                    executorService.execute(() -> server.sendToClient(cd));
+                } catch (InterruptedException e) {
+                    executorService.shutdown();
+                    break;
+                }
             }
         });
         sender.start();

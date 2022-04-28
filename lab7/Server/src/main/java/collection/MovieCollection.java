@@ -10,7 +10,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import exceptions.MyExceptions;
 import org.slf4j.Logger;
@@ -24,6 +27,7 @@ public class MovieCollection {
     private final LocalDate initDate;
     private final Database db;
     private final Logger log = LoggerFactory.getLogger(MovieCollection.class);
+    private final ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
 
     /**
      * Create MovieCollection and initialize it with values from database
@@ -48,6 +52,13 @@ public class MovieCollection {
         }
     }
 
+    private boolean addMovieToMemory(Movie m) {
+        readWriteLock.writeLock().lock();
+        boolean result = pq.add(m);
+        readWriteLock.writeLock().unlock();
+        return result;
+    }
+
     private int initMoviesFromDB() throws SQLException {
         ResultSet m = db.executeQuery(
                 "SELECT movies.id AS id, movies.name AS name, coordinates.x AS c_x, coordinates.y AS c_y,\n" +
@@ -70,17 +81,30 @@ public class MovieCollection {
                     new Person(m.getString("p_name"), m.getDouble("p_weight"), Color.valueOf(m.getString("p_color")),
                             new Location(m.getDouble("l_x"), m.getDouble("l_y"), m.getString("l_name")))
                     );
-            pq.add(movie);
+            addMovieToMemory(movie);
         }
         return i;
     }
 
     public int size() {
-        return pq.size();
+        readWriteLock.readLock().lock();
+        int size = pq.size();
+        readWriteLock.readLock().unlock();
+        return size;
     }
 
-    public PriorityQueue<Movie> getPQ() {
-        return pq;
+    public String getTypeName() {
+        readWriteLock.readLock().lock();
+        String typeName = pq.getClass().getName();
+        readWriteLock.readLock().unlock();
+        return typeName;
+    }
+
+    public Stream<Movie> getQueueStream() {
+        readWriteLock.readLock().lock();
+        Stream<Movie> stream = pq.stream();
+        readWriteLock.readLock().unlock();
+        return stream;
     }
 
     /**
@@ -90,7 +114,7 @@ public class MovieCollection {
      * @throws InvalidArgumentException if argument not specified or has wrong format
      */
     public Movie getMovieById(int id) throws InvalidArgumentException {
-        return pq.stream()
+        return getQueueStream()
                 .filter(movie -> movie.getId() == id)
                 .findFirst()
                 .orElseThrow(() -> new InvalidArgumentException("Film with id " + id + " not found."));
@@ -101,7 +125,7 @@ public class MovieCollection {
      * @return Movie if movie found OR null if movie not found
      */
     public Movie getLowestByOscars() {
-        return pq.stream()
+        return getQueueStream()
                 .min(Comparator.comparing(Movie::getOscarsCount))
                 .orElse(null);
     }
@@ -136,7 +160,8 @@ public class MovieCollection {
                 m.getName(), userId, coordinatesId, m.getCreationDate(), m.getOscarsCount(), m.getMovieGenre(), m.getMpaaRating(), personsId);
         rs.next();
         m.setId(rs.getInt("id"));
-        return pq.add(m);
+
+        return addMovieToMemory(m);
     }
 
     public boolean updateMovie(Movie m, int userId) throws InvalidArgumentException, SQLException {
@@ -179,7 +204,7 @@ public class MovieCollection {
     public boolean removeMovieById(int id, int userId) throws SQLException {
         int n = db.executeUpdate("DELETE FROM movies WHERE id = ? AND user_id = ?", id, userId);
         if (n > 0) {
-            pq = pq.stream()
+            pq = getQueueStream()
                     .filter(movie -> movie.getId() != id)
                     .collect(Collectors.toCollection(PriorityQueue<Movie>::new));
             return true;
@@ -232,7 +257,7 @@ public class MovieCollection {
         if (size() == 0) return "Collection is empty.";
         StringBuilder sb = new StringBuilder("Movies:\n");
         sb.append("ID NAME\n");
-        pq.forEach(movie -> sb.append(movie).append('\n'));
+        getQueueStream().forEach(movie -> sb.append(movie).append('\n'));
         return sb.toString();
     }
 
@@ -241,8 +266,8 @@ public class MovieCollection {
      * @return String of collection type, init date, total elements count
      */
     public String getInfo() {
-        return "*Collection type: " + pq.getClass().getName() +
+        return "*Collection type: " + getTypeName() +
                 "\n*Initialization date: " + initDate.toString() +
-                "\n*Total elements: " + pq.size();
+                "\n*Total elements: " + size();
     }
 }

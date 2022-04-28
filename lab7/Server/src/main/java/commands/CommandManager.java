@@ -55,6 +55,10 @@ public class CommandManager {
         return commands.get(name);
     }
 
+    public Database getDb() {
+        return db;
+    }
+
     /**
      * Run command by name defined in {@link #putCommand(String, boolean, Command)}
      * @param cp Packet that contain command name and command argument
@@ -268,7 +272,7 @@ public class CommandManager {
 
         putCommand("filter_less_than_oscars_count", false, (userId, count, argObject) -> {
             int oscarsCount = (int) argObject;
-            List<Movie> subCollection = mc.getPQ().stream()
+            List<Movie> subCollection = mc.getQueueStream()
                     .filter(movie -> movie.getOscarsCount() < oscarsCount)
                     .collect(Collectors.toList());
 
@@ -286,7 +290,7 @@ public class CommandManager {
         putCommand("filter_greater_than_director", false, (userId, count, argObject) -> {
             int id = (int) argObject;
             Person d = mc.getMovieById(id).getDirector();
-            List<Movie> subCollection = mc.getPQ().stream()
+            List<Movie> subCollection = mc.getQueueStream()
                     .filter(movie -> movie.getDirector().compareTo(d) > 0)
                     .collect(Collectors.toList());
 
@@ -304,7 +308,7 @@ public class CommandManager {
 
         putCommand("print_unique_oscars_count", false, (userId, count, argObject) -> {
             Set<Integer> uniqOscar = new HashSet<>();
-            mc.getPQ().forEach(movie -> uniqOscar.add(movie.getOscarsCount()));
+            mc.getQueueStream().forEach(movie -> uniqOscar.add(movie.getOscarsCount()));
 
             if (uniqOscar.isEmpty()) {
                 return "Collection is empty, so no unique oscars.";

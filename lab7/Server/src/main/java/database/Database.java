@@ -1,23 +1,29 @@
 package database;
 
+import console.FileManager;
 import org.intellij.lang.annotations.Language;
+
+import java.io.IOException;
 import java.sql.*;
 import java.time.LocalDate;
+import java.util.Properties;
 
 public class Database {
     private final Connection connection;
     private PreparedStatement stmt;
     private final String dbSalt;
 
-    public Database(String host, String dbName, String user, String password, String dbSalt) throws SQLException {
+    public Database(String configFile) throws SQLException, IOException {
         try {
             Class.forName("org.postgresql.Driver");
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
-        String url = String.format("jdbc:postgresql://%s:5432/%s", host, dbName);
-        connection = DriverManager.getConnection(url, user, password);
-        this.dbSalt = dbSalt;
+        Properties prop = new Properties();
+        prop.load(new FileManager().getResourcesStream(configFile));
+        String url = String.format("jdbc:postgresql://%s:5432/%s", prop.getProperty("host"), prop.getProperty("dbName"));
+        connection = DriverManager.getConnection(url, prop);
+        this.dbSalt = prop.getProperty("dbSalt");
     }
 
     public String getDbSalt() {

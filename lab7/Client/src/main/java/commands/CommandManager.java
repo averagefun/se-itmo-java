@@ -19,6 +19,7 @@ public class CommandManager {
     private final Map<String, Command> commands;
     private final Map<String, String> descriptions;
     private final Map<String, Boolean> onlyAuthorized;
+    private final Properties props;
     private final Client client;
 
     private final Console console;
@@ -27,13 +28,16 @@ public class CommandManager {
     private final HashSet<MyFile> fileHistory;
 
 
-    public CommandManager(Scanner sc, Client client) {
+    public CommandManager(Console console, Client client, String configFile) throws IOException {
         this.commands = new HashMap<>();
         this.descriptions = new HashMap<>();
         this.onlyAuthorized = new HashMap<>();
         this.client = client;
 
-        this.console = new Console(sc, true);
+        this.props = new Properties();
+        props.load(new FileManager().getResourcesStream(configFile));
+
+        this.console = console;
         this.valueGetter = console::readLine;
 
         this.fileHistory = new HashSet<>();
@@ -90,14 +94,6 @@ public class CommandManager {
         }
     }
 
-    /**
-     * Run command with no argument
-     * @param name command name
-     */
-    public void runCommand(String name) {
-        runCommand(name, null);
-    }
-
     private Object getObjectFromServer(String name) {
         return getObjectFromServer(name, null, 0);
     }
@@ -124,7 +120,7 @@ public class CommandManager {
 
     private void setPrintMode() {
         console.setPrintMode(true);
-        valueGetter = console.getSc()::nextLine;
+        valueGetter = console::readLine;
     }
 
     private void offPrintMode(Queue<String> q) {
@@ -200,8 +196,7 @@ public class CommandManager {
             console.printMode("Enter password [keep empty if no password set]: ");
             String password = console.readLine();
 
-            String salt = new FileManager().readResourcesFile("config.txt");
-            SHA224 sha224 = new SHA224(salt, false);
+            SHA224 sha224 = new SHA224(props.getProperty("pepper"), false);
             password = sha224.getHashString(password);
             answer = getStringFromServer(name, username + "::" + password, 1);
             if (answer.equals("success")) {
@@ -240,8 +235,7 @@ public class CommandManager {
                 }
                 console.printMode("Passwords do not match. Enter password again: ");
             }
-            String salt = new FileManager().readResourcesFile("config.txt");
-            SHA224 sha224 = new SHA224(salt, false);
+            SHA224 sha224 = new SHA224(props.getProperty("pepper"), false);
             password = sha224.getHashString(password);
             String answer = getStringFromServer(name, username + "::" + password, 1);
             if (answer.equals("success")) {

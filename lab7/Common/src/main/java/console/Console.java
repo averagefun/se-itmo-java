@@ -37,6 +37,10 @@ public class Console {
         if (printMode) print(printable);
     }
 
+    public static void println(){
+        System.out.println();
+    }
+
     public static void println(Object printable){
         System.out.println(printable);
     }

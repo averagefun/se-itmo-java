@@ -39,12 +39,14 @@ public class FileManager {
         return q;
     }
 
-    public String readResourcesFile(String fileName) throws IOException {
+    public InputStream getResourcesStream(String fileName) {
         // Getting ClassLoader obj
         ClassLoader classLoader = this.getClass().getClassLoader();
         // Getting resource(File) from class loader
-        InputStream is = classLoader.getResourceAsStream(fileName);
+        return classLoader.getResourceAsStream(fileName);
+    }
 
-        return readFile(is);
+    public String readResourcesFile(String fileName) throws IOException {
+        return readFile(getResourcesStream(fileName));
     }
 }

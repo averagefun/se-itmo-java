@@ -9,7 +9,6 @@ import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.NoConnectionPendingException;
-import java.util.NoSuchElementException;
 import java.util.Scanner;
 
 public class Client {
@@ -96,16 +95,14 @@ public class Client {
     /**
      * Cycle, that listen user input before exit from program
      */
-    public void interactiveMode(Scanner sc, CommandManager cm) {
+    public void interactiveMode(Console console, CommandManager cm) {
         //noinspection InfiniteLoopStatement
         while(true) {
             Console.print(isAuthorized ? ("$ [" + username + "] ")  : "$ ");
-            String[] input = {};
-            try {
-                input = sc.nextLine().trim().split(" ");
-            } catch (NoSuchElementException e) {
-                cm.runCommand("exit");
-            }
+
+            String readLine = console.readLine();
+            String[] input = readLine.split(" ");
+
             String command = null;
             String arg = null;
             if (input.length >= 1) {
@@ -126,8 +123,8 @@ public class Client {
         Client client = new Client(inetAddress);
 
         Scanner sc = new Scanner(System.in);
-        CommandManager cm = new CommandManager(sc, client);
-
-        client.interactiveMode(sc, cm);
+        Console console = new Console(sc, true);
+        CommandManager cm = new CommandManager(console, client, "client.cfg");
+        client.interactiveMode(console, cm);
     }
 }
