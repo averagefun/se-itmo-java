@@ -32,10 +32,10 @@ public class MovieCollection {
     /**
      * Create MovieCollection and initialize it with values from database
      */
-    public MovieCollection(Database db) {
+    public MovieCollection() {
         this.pq = new PriorityQueue<>(Comparator.comparing(movie -> movie.getCoordinates().getX()));
         this.initDate = LocalDate.now();
-        this.db = db;
+        this.db = Database.getInstance();
 
         // try to initialize values from database
         try {

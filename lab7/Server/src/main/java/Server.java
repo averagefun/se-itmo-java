@@ -124,19 +124,10 @@ public class Server {
     }
 
     public static void main(String[] args) {
-        String configFile = "db.cfg";
-        if (args.length > 0 && args[0].equals("helios")) configFile = "db_helios.cfg";
+        if (args.length > 0 && args[0].equals("helios")) Database.setConfigFile("db_helios.cfg");
 
-        Database db;
-        try {
-            db = new Database(configFile);
-        } catch (SQLException | IOException e) {
-            log.error("database connection error:\n{}", MyExceptions.getStringStackTrace(e));
-            return;
-        }
-
-        MovieCollection mc = new MovieCollection(db);
-        CommandManager cm = new CommandManager(mc, db);
+        MovieCollection mc = new MovieCollection();
+        CommandManager cm = new CommandManager(mc);
 
         DatagramSocket datagramSocket;
         try {

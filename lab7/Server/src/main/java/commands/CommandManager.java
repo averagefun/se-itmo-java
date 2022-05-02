@@ -18,6 +18,8 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.xml.crypto.Data;
+
 /**
  * Class that operates Command
  */
@@ -28,11 +30,11 @@ public class CommandManager {
     private final Map<String, Boolean> onlyAuthorized;
     private final Logger log = LoggerFactory.getLogger(MovieCollection.class);
 
-    public CommandManager(MovieCollection mc, Database db) {
+    public CommandManager(MovieCollection mc) {
         this.commands = new HashMap<>();
         this.onlyAuthorized = new HashMap<>();
         this.mc = mc;
-        this.db = db;
+        this.db = Database.getInstance();
         initCommands();
     }
 

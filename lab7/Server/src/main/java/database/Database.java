@@ -1,6 +1,7 @@
 package database;
 
 import console.FileManager;
+import exceptions.MyExceptions;
 import org.intellij.lang.annotations.Language;
 
 import java.io.IOException;
@@ -8,22 +9,50 @@ import java.sql.*;
 import java.time.LocalDate;
 import java.util.Properties;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class Database {
+    private static String CONFIG_FILE = "db.cfg";
+    private static volatile Database instance;
+
     private final Connection connection;
     private PreparedStatement stmt;
     private final String dbSalt;
 
-    public Database(String configFile) throws SQLException, IOException {
+    private final static Logger log = LoggerFactory.getLogger(Database.class);
+
+    private Database() throws SQLException, IOException {
         try {
             Class.forName("org.postgresql.Driver");
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
         Properties prop = new Properties();
-        prop.load(new FileManager().getResourcesStream(configFile));
+        prop.load(new FileManager().getResourcesStream(CONFIG_FILE));
         String url = String.format("jdbc:postgresql://%s:5432/%s", prop.getProperty("host"), prop.getProperty("dbName"));
         connection = DriverManager.getConnection(url, prop);
         this.dbSalt = prop.getProperty("dbSalt");
+    }
+
+    public static Database getInstance(){
+        if (instance == null) {
+            synchronized (Database.class) {
+                if (instance == null) {
+                    try {
+                        instance = new Database();
+                    } catch (SQLException | IOException e) {
+                        log.error("database connection error:\n{}", MyExceptions.getStringStackTrace(e));
+                        System.exit(0);
+                    }
+                }
+            }
+        }
+        return instance;
+    }
+
+    public static void setConfigFile(String configFile) {
+        CONFIG_FILE = configFile;
     }
 
     public String getDbSalt() {
