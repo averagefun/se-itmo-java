@@ -37,7 +37,10 @@ public class Server {
     private void readRequest() throws IOException {
             byte[] receiveBuffer = new byte[10000];
             DatagramPacket receiveDatagramPacket = new DatagramPacket(receiveBuffer, receiveBuffer.length);
+            datagramSocket.setSoTimeout(2000);
             datagramSocket.receive(receiveDatagramPacket);
+
+            if (receiveDatagramPacket.getAddress() == null) return;
 
             new Thread(() -> {
                 try {
@@ -83,7 +86,7 @@ public class Server {
 
     }
 
-    public void startShell(Scanner sc, Thread processor, Thread sender) {
+    public void startShell(Scanner sc, Thread receiver, Thread processor, Thread sender) {
         log.info("successfully started server shell: type 'exit' to safely shut down server");
         while(true) {
             String input = "";
@@ -93,18 +96,19 @@ public class Server {
                 System.exit(0);
             }
             if (input.equals("exit")) {
+                receiver.interrupt();
                 processor.interrupt();
                 sender.interrupt();
 
                 log.info("shut downing server...");
 
                 int i;
-                for (i = 0; processor.isAlive() || sender.isAlive(); i++) {
+                for (i = 0; receiver.isAlive() || processor.isAlive() || sender.isAlive(); i++) {
                     try {
                         //noinspection BusyWait
                         Thread.sleep(300);
                     } catch (InterruptedException ignored) {}
-                    if (i%10==4) Console.print(".");
+                    if (i > 10 && i%10==4) Console.print(".");
                 }
                 if (i >= 4) Console.println();
 
@@ -141,14 +145,13 @@ public class Server {
         log.info("successfully started listening requests at port {}", Common.PORT);
 
         Thread receiver = new Thread(() -> {
-            while (true) {
+            while (!Thread.currentThread().isInterrupted()) {
                 try {
                     server.readRequest();
                 } catch (IOException ignored) {}
             }
         });
-        receiver.setDaemon(true);
-        receiver.start(); // start receiving and processing requests
+        receiver.start();
 
         Thread processor = new Thread(() -> {
             ExecutorService executorService = Executors.newFixedThreadPool(10);
@@ -179,7 +182,7 @@ public class Server {
         sender.start();
 
         Scanner sc = new Scanner(System.in);
-        server.startShell(sc, processor, sender); // start reading directly server commands
+        server.startShell(sc, receiver, processor, sender); // start reading server commands from shell
     }
 
 }
