@@ -1,0 +1,9 @@
+.idea/
+lib/
+target/
+
+~*.docx
+*.cfg
+config.json
+config_helios.json
+config.txt
