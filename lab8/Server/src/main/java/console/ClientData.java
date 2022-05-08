@@ -1,16 +1,18 @@
 package console;
 
+import network.CommandRequest;
+
 import java.net.InetAddress;
 
 public class ClientData {
     private final InetAddress inetAddress;
     private final int port;
-    private final Object data;
+    private final CommandRequest cReq;
 
-    public ClientData(InetAddress inetAddress, int port, Object data) {
+    public ClientData(InetAddress inetAddress, int port, CommandRequest cReq) {
         this.inetAddress = inetAddress;
         this.port = port;
-        this.data = data;
+        this.cReq = cReq;
     }
 
     public InetAddress getInetAddress() {
@@ -21,7 +23,7 @@ public class ClientData {
         return port;
     }
 
-    public Object getData() {
-        return data;
+    public CommandRequest getCommandRequest() {
+        return cReq;
     }
 }

@@ -2,6 +2,7 @@ package commands;
 
 import exceptions.ExecuteScriptFailedException;
 import exceptions.InvalidArgumentException;
+import network.CommandResponse;
 
 import java.io.IOException;
 import java.sql.SQLException;
@@ -12,5 +13,5 @@ import java.sql.SQLException;
  */
 @FunctionalInterface
 public interface Command {
-    Object run(int userId, int count, Object arg) throws InvalidArgumentException, ExecuteScriptFailedException, IOException, SQLException;
+    CommandResponse run(String username, int count, Object arg) throws InvalidArgumentException, ExecuteScriptFailedException, IOException, SQLException;
 }

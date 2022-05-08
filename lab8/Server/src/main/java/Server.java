@@ -4,9 +4,10 @@ import collection.MovieCollection;
 import commands.CommandManager;
 import console.ClientData;
 import console.Console;
+import console.ProcessedClientData;
 import database.Database;
 import exceptions.MyExceptions;
-import network.CommandPacket;
+import network.CommandRequest;
 import network.Common;
 
 import java.net.DatagramPacket;
@@ -25,7 +26,7 @@ public class Server {
     private final CommandManager cm;
     private final static Logger log = LoggerFactory.getLogger(Server.class);
     private final BlockingQueue<ClientData> queueToProcess;
-    private final BlockingQueue<ClientData> queueToSend;
+    private final BlockingQueue<ProcessedClientData> queueToSend;
 
     public Server(DatagramSocket datagramSocket, CommandManager cm) {
         this.datagramSocket = datagramSocket;
@@ -53,7 +54,7 @@ public class Server {
                     ByteArrayInputStream bais = new ByteArrayInputStream(receiveBuffer);
                     ObjectInputStream ois = new ObjectInputStream(bais);
 
-                    ClientData cd = new ClientData(inetAddress, port, ois.readObject());
+                    ClientData cd = new ClientData(inetAddress, port, (CommandRequest) ois.readObject());
                     queueToProcess.add(cd);
                     log.debug("{} finished reading command", Thread.currentThread().getName());
                 } catch (IOException | ClassNotFoundException ignored) {}
@@ -62,24 +63,24 @@ public class Server {
 
     public void process(ClientData cd) {
         log.debug("{} started processing command", Thread.currentThread().getName());
-        ClientData newCd = new ClientData(cd.getInetAddress(), cd.getPort(),
-                cm.runCommand((CommandPacket) cd.getData()));
-        queueToSend.add(newCd);
+        ProcessedClientData newPcd = new ProcessedClientData(cd.getInetAddress(), cd.getPort(),
+                cd.getCommandRequest(), cm.runCommand(cd.getCommandRequest()));
+        queueToSend.add(newPcd);
         log.debug("{} finished processing command", Thread.currentThread().getName());
     }
 
-    public void sendToClient(ClientData cd) {
+    public void sendToClient(ProcessedClientData pcd) {
         log.debug("{} started sending result to client", Thread.currentThread().getName());
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             ObjectOutputStream oos = new ObjectOutputStream(baos);
-            oos.writeObject(cd.getData());
+            oos.writeObject(pcd.getCommandResponse());
             byte[] sendBuffer = baos.toByteArray();
 
             DatagramPacket sendDatagramPacket = new DatagramPacket(sendBuffer, sendBuffer.length,
-                    cd.getInetAddress(), cd.getPort());
+                    pcd.getInetAddress(), pcd.getPort());
             datagramSocket.send(sendDatagramPacket);
-            log.info("send {} bytes of data to {}:{}", sendBuffer.length, cd.getInetAddress(), cd.getPort());
+            log.info("send {} bytes of data to {}:{}", sendBuffer.length, pcd.getInetAddress(), pcd.getPort());
         } catch (IOException ignored) {
         }
         log.debug("{} finished sending result to client", Thread.currentThread().getName());
@@ -171,8 +172,8 @@ public class Server {
             ExecutorService executorService = Executors.newFixedThreadPool(10);
             while (true) {
                 try {
-                    ClientData cd = server.queueToSend.take();
-                    executorService.execute(() -> server.sendToClient(cd));
+                    ProcessedClientData pcd = server.queueToSend.take();
+                    executorService.execute(() -> server.sendToClient(pcd));
                 } catch (InterruptedException e) {
                     executorService.shutdown();
                     break;

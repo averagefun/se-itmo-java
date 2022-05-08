@@ -1,7 +1,12 @@
-package console;
+package client;
 
 import commands.CommandManager;
+import console.Console;
 import exceptions.AuthorizationException;
+import gui.AuthFrame;
+import localization.MyBundle;
+import localization.MyLocale;
+import network.CommandResponse;
 import network.Common;
 
 import java.io.*;
@@ -66,7 +71,7 @@ public class Client {
         datagramChannel.send(ByteBuffer.wrap(baos.toByteArray()), socketAddress);
     }
 
-    public <T extends Serializable> Object sendThenReceive(T objToSend) {
+    public <T extends Serializable> CommandResponse sendThenReceive(T objToSend) {
         try {
             ByteBuffer byteBuffer = ByteBuffer.allocate(10000);
 
@@ -86,7 +91,7 @@ public class Client {
 
             ByteArrayInputStream bais = new ByteArrayInputStream(byteBuffer.array());
             ObjectInputStream ois = new ObjectInputStream(bais);
-            return ois.readObject();
+            return (CommandResponse) ois.readObject();
         } catch (IOException | ClassNotFoundException | InterruptedException e) {
             return null;
         }
@@ -95,7 +100,7 @@ public class Client {
     /**
      * Cycle, that listen user input before exit from program
      */
-    public void interactiveMode(Console console, CommandManager cm) {
+    public void consoleMode(Console console, CommandManager cm) {
         //noinspection InfiniteLoopStatement
         while(true) {
             Console.print(isAuthorized ? ("$ [" + username + "] ")  : "$ ");
@@ -111,13 +116,20 @@ public class Client {
             if (input.length >= 2) {
                 arg = input[1];
             }
-            cm.runCommand(command, arg);
+            MyBundle bundle = MyBundle.getBundle("console", MyLocale.ENGLISH);
+            String commandOutput = cm.runCommand(command, arg).getMessage();
+            String bundleOutput = bundle.getString(commandOutput);
+            console.printlnMode(bundleOutput.isEmpty() ? commandOutput : bundleOutput);
         }
     }
 
+    public void guiMode(CommandManager cm) {
+        AuthFrame authFrame = new AuthFrame(cm);
+        authFrame.display();
+    }
+
     public static void main(String[] args) throws IOException {
-        Console.println("Welcome to client app. Enter command or type 'help'.");
-        Console.println("You can sign in or create new account with commands '/sign_in', '/sign_up'.");
+        boolean isGUI = args.length <= 0 || !args[0].equalsIgnoreCase("console");
 
         InetAddress inetAddress = InetAddress.getByName("localhost");
         Client client = new Client(inetAddress);
@@ -125,6 +137,13 @@ public class Client {
         Scanner sc = new Scanner(System.in);
         Console console = new Console(sc, true);
         CommandManager cm = new CommandManager(console, client, "client.cfg");
-        client.interactiveMode(console, cm);
+
+        if (isGUI) {
+            client.guiMode(cm);
+        } else {
+            Console.println("Welcome to console client app. Enter command or type 'help'.");
+            Console.println("You can sign in or create new account with commands '/sign_in', '/sign_up'.");
+            client.consoleMode(console, cm);
+        }
     }
 }

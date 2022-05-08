@@ -2,18 +2,18 @@ package network;
 
 import java.io.Serializable;
 
-public class CommandPacket implements Serializable {
+public class CommandRequest implements Serializable {
     private final String username;
     private final String password;
     private final String name;
     private final int count;
     private final Object arg;
 
-    public CommandPacket(String name, int count, String username, String password) {
+    public CommandRequest(String name, int count, String username, String password) {
         this(name, count, username, password, null);
     }
 
-    public <T extends Serializable> CommandPacket(String name, int count, T arg, String username, String password) {
+    public <T extends Serializable> CommandRequest(String name, int count, T arg, String username, String password) {
         this.name = name;
         this.username = username;
         this.password = password;

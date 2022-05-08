@@ -42,10 +42,9 @@ create table coordinates
 
 create table users
 (
-    id serial
+    username varchar(255)
         constraint users_pk
             primary key,
-    username varchar(255) unique,
     password varchar(255),
     salt varchar(127)
 );
@@ -55,8 +54,8 @@ create table movies
     id serial
         constraint movies_pk
             primary key,
-    user_id int not null constraint movies_users_id_fk
-        references users (id)
+    username varchar(255) not null constraint movies_users_id_fk
+        references users (username)
         on update cascade on delete cascade,
     name varchar(255) not null,
     coordinates int not null

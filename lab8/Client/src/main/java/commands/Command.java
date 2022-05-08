@@ -3,6 +3,7 @@ package commands;
 import exceptions.CommandInterruptedException;
 import exceptions.ExecuteScriptFailedException;
 import exceptions.InvalidArgumentException;
+import network.CommandResponse;
 
 import java.io.IOException;
 
@@ -12,5 +13,5 @@ import java.io.IOException;
  */
 @FunctionalInterface
 public interface Command {
-    String run(String name, String arg) throws InvalidArgumentException, ExecuteScriptFailedException, IOException, CommandInterruptedException;
+    CommandResponse run(String name, String arg) throws InvalidArgumentException, ExecuteScriptFailedException, IOException, CommandInterruptedException;
 }

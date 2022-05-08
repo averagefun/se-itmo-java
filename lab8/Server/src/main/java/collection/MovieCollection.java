@@ -10,9 +10,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.*;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -35,7 +33,7 @@ public class MovieCollection {
      * Create MovieCollection and initialize it with values from database
      */
     public MovieCollection() {
-        this.pq = new PriorityQueue<>(Comparator.comparing(movie -> movie.getCoordinates().getX()));
+        this.pq = new PriorityQueue<>();
         this.initDate = LocalDate.now();
         this.db = Database.getInstance();
 
@@ -63,7 +61,8 @@ public class MovieCollection {
 
     private int initMoviesFromDB() throws SQLException {
         ResultSet m = db.executeQuery(
-                "SELECT movies.id AS id, movies.name AS name, coordinates.x AS c_x, coordinates.y AS c_y,\n" +
+                "SELECT movies.id AS id, movies.username AS username, " +
+                        "movies.name AS name, coordinates.x AS c_x, coordinates.y AS c_y,\n" +
                         "       movies.creation_date AS creation_date, movies.oscars_count AS oscars_count,\n" +
                         "       movies.movie_genre AS movie_genre, movies.mpaa_rating AS mpaa_rating,\n" +
                         "       persons.name AS p_name, persons.weight AS p_weight, persons.hair_color AS p_color,\n" +
@@ -75,6 +74,7 @@ public class MovieCollection {
         for (i = 0; m.next(); i++) {
             Movie movie = new Movie(
                     m.getInt("id"),
+                    m.getString("username"),
                     m.getString("name"),
                     new Coordinates(m.getFloat("c_x"), m.getLong("c_y")),
                     m.getInt("oscars_count"),
@@ -109,6 +109,10 @@ public class MovieCollection {
         return stream;
     }
 
+    public PriorityQueue<Movie> getPqCopy() {
+        return getQueueStream().collect(Collectors.toCollection(PriorityQueue<Movie>::new));
+    }
+
     /**
      * Find movie in collection by id and return it
      * @param id movie id
@@ -137,7 +141,7 @@ public class MovieCollection {
      * @param m Movie to add
      * @return true in case of successful adding else false
      */
-    public boolean addMovie(Movie m, int userId) throws SQLException {
+    public boolean addMovie(Movie m, String username) throws SQLException {
         ResultSet rs = db.executeQuery("INSERT INTO coordinates (x, y) VALUES (?, ?) RETURNING id",
                 m.getCoordinates().getX(), m.getCoordinates().getY());
         rs.next();
@@ -157,23 +161,23 @@ public class MovieCollection {
         int personsId = rs.getInt("id");
         db.closeQuery();
 
-        rs = db.executeQuery("INSERT INTO movies (name, user_id, coordinates, creation_date, oscars_count, movie_genre, mpaa_rating, director)" +
+        rs = db.executeQuery("INSERT INTO movies (name, username, coordinates, creation_date, oscars_count, movie_genre, mpaa_rating, director)" +
                         " VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
-                m.getName(), userId, coordinatesId, m.getCreationDate(), m.getOscarsCount(), m.getMovieGenre(), m.getMpaaRating(), personsId);
+                m.getName(), username, coordinatesId, m.getCreationDate(), m.getOscarsCount(), m.getMovieGenre(), m.getMpaaRating(), personsId);
         rs.next();
         m.setId(rs.getInt("id"));
 
         return addMovieToMemory(m);
     }
 
-    public boolean updateMovie(Movie m, int userId) throws InvalidArgumentException, SQLException {
+    public boolean updateMovie(Movie m, String username) throws InvalidArgumentException, SQLException {
         int movieId = m.getId();
         ResultSet rs = db.executeQuery(
-                "SELECT movies.coordinates AS coordinates, movies.user_id AS user_id, movies.director AS director, persons.location AS location FROM movies\n" +
+                "SELECT movies.coordinates AS coordinates, movies.username AS username, movies.director AS director, persons.location AS location FROM movies " +
                 "JOIN persons on movies.director = persons.id WHERE movies.id = ?", movieId);
         rs.next();
-        int dbUserId = rs.getInt("user_id");
-        if (userId != dbUserId) return false;
+        String dbUsername = rs.getString("username");
+        if (!username.equals(dbUsername)) return false;
         int coordinatesId = rs.getInt("coordinates");
         int directorId = rs.getInt("director");
         int locationId = rs.getInt("location");
@@ -191,8 +195,6 @@ public class MovieCollection {
 
         db.executeUpdate("UPDATE movies SET name = ?, oscars_count = ?, movie_genre = ?, mpaa_rating = ? WHERE id = ?",
                 m.getName(), m.getOscarsCount(), m.getMovieGenre(), m.getMpaaRating(), movieId);
-        rs.next();
-        m.setId(rs.getInt("id"));
 
         getMovieById(movieId).updateMovie(m);
         return true;
@@ -203,8 +205,8 @@ public class MovieCollection {
      * @param id id of Movie that will be removed
      * @return true if Movie was in collection OR false if Movie wasn't in collection (so nothing will be removed)
      */
-    public boolean removeMovieById(int id, int userId) throws SQLException {
-        int n = db.executeUpdate("DELETE FROM movies WHERE id = ? AND user_id = ?", id, userId);
+    public boolean removeMovieById(int id, String username) throws SQLException {
+        int n = db.executeUpdate("DELETE FROM movies WHERE id = ? AND username = ?", id, username);
         if (n > 0) {
             pq = getQueueStream()
                     .filter(movie -> movie.getId() != id)
@@ -220,9 +222,9 @@ public class MovieCollection {
      * @return true if Movie was in collection OR false if Movie wasn't in collection (so nothing will be removed)
      * @throws InvalidArgumentException if argument not specified or has wrong format
      */
-    public boolean removeGreater(int id, int userId) throws InvalidArgumentException, SQLException {
+    public boolean removeGreater(int id, String username) throws InvalidArgumentException, SQLException {
         Movie m = getMovieById(id);
-        int n = db.executeUpdate("DELETE FROM movies WHERE user_id = ? AND id > ?", userId, m.getId());
+        int n = db.executeUpdate("DELETE FROM movies WHERE username = ? AND id > ?", username, m.getId());
         initMoviesFromDB();
         return n > 0;
     }
@@ -233,9 +235,9 @@ public class MovieCollection {
      * @return true if Movie was in collection OR false if Movie wasn't in collection (so nothing will be removed)
      * @throws InvalidArgumentException if argument not specified or has wrong format
      */
-    public boolean removeLower(int id, int userId) throws SQLException, InvalidArgumentException {
+    public boolean removeLower(int id, String username) throws SQLException, InvalidArgumentException {
         Movie m = getMovieById(id);
-        int n = db.executeUpdate("DELETE FROM movies WHERE user_id = ? AND id < ?", userId, m.getId());
+        int n = db.executeUpdate("DELETE FROM movies WHERE username = ? AND id < ?", username, m.getId());
         initMoviesFromDB();
         return n > 0;
     }
@@ -243,9 +245,9 @@ public class MovieCollection {
     /**
      * Clear all Movies in collection
      */
-    public boolean clear(int userId) {
+    public boolean clear(String username) {
         try {
-            db.executeUpdate("DELETE FROM movies WHERE user_id = ?", userId);
+            db.executeUpdate("DELETE FROM movies WHERE username = ?", username);
             initMoviesFromDB();
             return true;
         } catch (SQLException e) {

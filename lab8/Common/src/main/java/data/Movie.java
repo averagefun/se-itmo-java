@@ -12,6 +12,7 @@ import java.util.Locale;
  */
 public class Movie implements Comparable<Movie>, Serializable {
     private int id;
+    private String username;
     private String name;
     private Coordinates coordinates;
     private final LocalDate creationDate;
@@ -20,8 +21,9 @@ public class Movie implements Comparable<Movie>, Serializable {
     private MpaaRating mpaaRating;
     private Person director;
 
-    public Movie(@NotNull String name, @NotNull Coordinates coordinates, int oscarsCount, @NotNull MovieGenre movieGenre,
+    public Movie(@NotNull String username, @NotNull String name, @NotNull Coordinates coordinates, int oscarsCount, @NotNull MovieGenre movieGenre,
                  @Nullable MpaaRating mpaaRating, @Nullable Person director) {
+        this.username = username;
         this.name = name;
         this.coordinates = coordinates;
         this.creationDate = LocalDate.now();
@@ -31,9 +33,9 @@ public class Movie implements Comparable<Movie>, Serializable {
         this.director = director;
     }
 
-    public Movie(int id, @NotNull String name, @NotNull Coordinates coordinates, int oscarsCount, @NotNull MovieGenre movieGenre,
+    public Movie(int id, @NotNull String username, @NotNull String name, @NotNull Coordinates coordinates, int oscarsCount, @NotNull MovieGenre movieGenre,
                  @Nullable MpaaRating mpaaRating, @Nullable Person director) {
-        this(name, coordinates, oscarsCount, movieGenre, mpaaRating, director);
+        this(username, name, coordinates, oscarsCount, movieGenre, mpaaRating, director);
         this.id = id;
     }
 
@@ -57,6 +59,10 @@ public class Movie implements Comparable<Movie>, Serializable {
 
     public String getName() {
         return name;
+    }
+
+    public String getUsername() {
+        return username;
     }
 
     public Coordinates getCoordinates() {
@@ -85,6 +91,10 @@ public class Movie implements Comparable<Movie>, Serializable {
 
     public void setId(int id) {
         this.id = id;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
     }
 
     /**
