@@ -8,16 +8,16 @@ import java.awt.*;
 import java.util.*;
 
 public class AuthFrame extends AbstractFrame {
-    private final JLabel usernameText = new JLabel(bundle.getString("username"));
+    private final JLabel usernameLabel = new JLabel(bundle.getString("username"));
     private final JTextField usernameField = new JTextField();
-    private final JLabel passwordText = new JLabel(bundle.getString("password"));
+    private final JLabel passwordLabel = new JLabel(bundle.getString("password"));
     private final JPasswordField passwordField = new JPasswordField();
 
     private final JLabel authErrorLabel = new JLabel();
     private String authErrorLabelKey;
 
-    private final JButton logInButton = new JButton(bundle.getString("logIn"));
-    private final JButton signUpButton = new JButton(bundle.getString("signUp"));
+    private final JButton logInButton = new JButton(bundle.getString("logInButton"));
+    private final JButton signUpButton = new JButton(bundle.getString("signUpButton"));
 
     public AuthFrame(CommandManager cm) {
         super(cm);
@@ -29,8 +29,8 @@ public class AuthFrame extends AbstractFrame {
         setTitle(bundle.getString("titleAuth"));
 
         language.setText(bundle.getString("language"));
-        usernameText.setText(bundle.getString("username"));
-        passwordText.setText(bundle.getString("password"));
+        usernameLabel.setText(bundle.getString("username"));
+        passwordLabel.setText(bundle.getString("password"));
         setAuthErrorLabel(authErrorLabelKey);
 
         logInButton.setText(bundle.getString("logInButton"));
@@ -53,14 +53,14 @@ public class AuthFrame extends AbstractFrame {
         } else {
             authErrorLabelKey = key;
             String newLabel = bundle.getString(authErrorLabelKey);
-            authErrorLabel.setText(newLabel.isEmpty() ? "Error" : newLabel);
+            authErrorLabel.setText(newLabel.isEmpty() ? key : newLabel);
             authErrorLabel.setVisible(true);
         }
     }
 
     private void initElements() {
-        usernameText.setHorizontalAlignment(SwingConstants.CENTER);
-        passwordText.setHorizontalAlignment(SwingConstants.CENTER);
+        usernameLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        passwordLabel.setHorizontalAlignment(SwingConstants.CENTER);
         authErrorLabel.setForeground(Color.RED);
         usernameField.setPreferredSize(new Dimension(130, 20));
         passwordField.setPreferredSize(new Dimension(130, 20));
@@ -80,9 +80,9 @@ public class AuthFrame extends AbstractFrame {
     private void buttonCallback(CommandResponse response) {
         switch (response.getExitCode()) {
             case 0:
-                // SUCCESS -> OPEN MAIN FRAME
-                setVisible(false);
-                Frame mainFrame = new MainFrame(cm, Color.BLUE, usernameField.getText());
+                // SUCCESS -> close AUTH FRAME, open MAIN FRAME
+                dispose();
+                Frame mainFrame = new MainFrame(cm, usernameField.getText());
                 mainFrame.setVisible(true);
                 break;
             case 2:
@@ -103,7 +103,7 @@ public class AuthFrame extends AbstractFrame {
                 Queue<String> input = new ArrayDeque<>();
                 input.add(usernameField.getText());
                 input.add(new String(passwordField.getPassword()));
-                cm.setUIMode(input);
+                cm.setInputValues(input);
                 CommandResponse response = cm.runCommand("/sign_in");
                 buttonCallback(response);
                 activeAuthInterface(true);
@@ -118,7 +118,7 @@ public class AuthFrame extends AbstractFrame {
                 String password = new String(passwordField.getPassword());
                 input.add(password);
                 input.add(password);
-                cm.setUIMode(input);
+                cm.setInputValues(input);
                 CommandResponse response = cm.runCommand("/sign_up");
                 buttonCallback(response);
                 activeAuthInterface(true);
@@ -134,7 +134,7 @@ public class AuthFrame extends AbstractFrame {
         c.gridx = 0;
         c.gridy = 0;
         c.anchor = GridBagConstraints.WEST;
-        add(usernameText, c);
+        add(usernameLabel, c);
 
         c.gridx++;
         c.fill = GridBagConstraints.BOTH;
@@ -145,7 +145,7 @@ public class AuthFrame extends AbstractFrame {
         c.gridy++;
         c.fill = GridBagConstraints.NONE;
         c.anchor = GridBagConstraints.WEST;
-        add(passwordText, c);
+        add(passwordLabel, c);
 
         c.gridx++;
         c.fill = GridBagConstraints.BOTH;
@@ -162,7 +162,7 @@ public class AuthFrame extends AbstractFrame {
         c.gridy++;
         c.gridx = 0;
         c.gridwidth = 2;
-        c.gridheight = 5;
+        c.gridheight = 1;
         c.anchor = GridBagConstraints.CENTER;
         c.fill = GridBagConstraints.BOTH;
         add(authErrorLabel, c);

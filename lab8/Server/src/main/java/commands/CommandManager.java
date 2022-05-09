@@ -174,9 +174,7 @@ public class CommandManager {
             if (argObject == null) {
                 StringBuilder sb = new StringBuilder("All movies in collection:\n");
                 sb.append("| ID |      MOVIE NAME |   AUTHOR NAME |\n");
-                mc.getQueueStream()
-                        .sorted(Comparator.reverseOrder())
-                        .forEach(m -> {
+                mc.getQueueStream().forEach(m -> {
                     String row = String.format(Locale.US, "| %2d | %15s | %13s |",
                             m.getId(),
                             m.getName().length() <= 15 ? m.getName() : m.getName().substring(0, 15),

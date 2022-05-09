@@ -129,7 +129,7 @@ public class CommandManager {
         valueGetter = console::readLine;
     }
 
-    public void setUIMode(Queue<String> q) {
+    public void setInputValues(Queue<String> q) {
         console.setPrintMode(false);
         valueGetter = q::poll;
     }
@@ -226,7 +226,7 @@ public class CommandManager {
 
             String username = valueGetter.get();
             if (username.isEmpty()) {
-                console.printlnMode("Username can't be empty.");
+                return new CommandResponse(12, "Username can't be empty.");
             } else {
                 CommandResponse cRes = getResponseFromServer(name, username);
                 if (cRes.getExitCode() != 0) return cRes;

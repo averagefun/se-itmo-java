@@ -30,7 +30,7 @@ public class Common {
                 .interactiveInput("y (long > -863)", printMode, valueGetter);
         Coordinates coordinates = new Coordinates(x,y);
 
-        int oscarsCount = (int) new InputValidator(int.class, false, -1, Integer.MAX_VALUE)
+        int oscarsCount = (int) new InputValidator(int.class, false, -1, 12)
                 .loadPreviousValue(updMode, updMode ? movie.getOscarsCount() : null)
                 .interactiveInput("number of Oscars", printMode, valueGetter);
 

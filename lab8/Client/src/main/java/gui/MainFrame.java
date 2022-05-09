@@ -4,99 +4,84 @@ import client.Client;
 import commands.CommandManager;
 import console.Console;
 import data.Movie;
+import data.MovieGenre;
+import data.MpaaRating;
 import network.CommandResponse;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
 import javax.swing.table.TableRowSorter;
 import java.awt.*;
-import java.awt.event.ActionListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.time.format.FormatStyle;
-import java.util.Locale;
-import java.util.PriorityQueue;
-import java.util.Scanner;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.*;
+import java.util.List;
 
 class MainFrame extends AbstractFrame {
+    private final String login;
+
     private JTable table;
     private DefaultTableModel tableModel;
     private boolean clearSelection;
-    private boolean isTable = true;
-    boolean isExit = false;
-    private final boolean isnChange = false;
-    private final CopyOnWriteArrayList<Movie> creatureList = new CopyOnWriteArrayList<>();
-    private final CopyOnWriteArrayList<Movie> filteredList = new CopyOnWriteArrayList<>();
-    private CopyOnWriteArrayList<Movie> winniePoohList;
 
     private static final JLabel connectionText = new JLabel();
     private static final boolean isConnected = false;
-    private final JLabel infoObjectText = new JLabel(bundle.getString("info") + ":");
-    private final JLabel nameText = new JLabel(bundle.getString("name") + ":");
-    private final JLabel familyText = new JLabel(bundle.getString("family") + ":");
-    private final JLabel hungerText = new JLabel(bundle.getString("hunger") + ":");
-    private final JLabel locationText = new JLabel(bundle.getString("location") + ":");
-    private final JLabel timeText = new JLabel(bundle.getString("creationTime") + ":");
-    private final JLabel colorText = new JLabel(bundle.getString("color") + ":");
-    private final JLabel inventoryText = new JLabel(bundle.getString("inventory") + ":");
+    private final JLabel statusLabel = new JLabel(bundle.getString("statusAdd") + ":");
+    private final JLabel idLabel = new JLabel(bundle.getString("id") + ":");
+    private final JLabel authorLabel = new JLabel(bundle.getString("author") + ":");
+    private final JLabel nameLabel = new JLabel(bundle.getString("name") + ":");
+    private final JLabel creationDateLabel = new JLabel(bundle.getString("creationDate") + ":");
+    private final JLabel oscarsLabel = new JLabel(bundle.getString("oscars") + ":");
+    private final JLabel genreLabel = new JLabel(bundle.getString("genre") + ":");
+    private final JLabel ratingLabel = new JLabel(bundle.getString("rating") + ":");
+    private final JLabel xLabel = new JLabel(bundle.getString("x") + ":");
+    private final JLabel yLabel = new JLabel(bundle.getString("y") + ":");
 
-    private final JTextField nameValue = new JTextField();
-    private final JTextField familyValue = new JTextField();
-    private final JTextField hungerValue = new JTextField();
-    private final JTextField timeValue = new JTextField();
-    private final JTextField colorValue = new JTextField();
-    private final JTextField inventoryValue = new JTextField();
+
+    private final JTextField idField = new JTextField();
+    private final JTextField authorField = new JTextField();
+    private final JTextField nameField = new JTextField();
+    private final JTextField creationDateField = new JTextField();
+    private final JComboBox<MovieGenre> genreComboBox = new JComboBox<>(MovieGenre.values());
+    private final JComboBox<MpaaRating> ratingComboBox = new JComboBox<>(MpaaRating.values());
+    private final JComboBox<Integer> oscarsComboBox = new JComboBox<>(new Integer[]{0,1,2,3,4,5,6,7,8,9,10,11});
+    private final JTextField xField = new JTextField();
+    private final JTextField yField = new JTextField();
 
     JPanel graphicsPanel;
 
     private final JLabel infoText = new JLabel(" " + bundle.getString("greeting"));
 
-    private final JLabel nameFromTo = new JLabel(bundle.getString("name"));
-    private final JTextField nameTo = new JTextField();
-    private final JLabel familyFromTo = new JLabel(bundle.getString("family"));
-    private final JTextField familyTo = new JTextField();
-    private final JLabel timeFromTo = new JLabel(bundle.getString("time"));
-    private final JTextField timeTo = new JTextField();
-    private final JTextField xTo = new JTextField();
-    private final JTextField yTo = new JTextField();
-    private final JTextField sizeTo = new JTextField();
-    private final JLabel xText = new JLabel("X:");
-    private final JLabel yText = new JLabel("Y:");
+    private final JTextField idFilter = new JTextField();
+    private final JTextField authorFilter = new JTextField();
+    private final JTextField nameFilter = new JTextField();
+    private final JTextField creationDateFilter = new JTextField();
+    private final JComboBox<MovieGenre> genreFilter = new JComboBox<>(MovieGenre.values());
+    private final JComboBox<MpaaRating> ratingFilter = new JComboBox<>(MpaaRating.values());
+    private final JComboBox<Integer> oscarsFilter = new JComboBox<>(new Integer[]{0,1,2,3,4,5,6,7,8,9,10,11});
+    private final JTextField xFilter = new JTextField();
+    private final JTextField yFilter = new JTextField();
 
-    private final JLabel locationFromTo = new JLabel(bundle.getString("location"));
-    private final JLabel infoConnectionText = new JLabel("<html><h1 align=\"center\">" + bundle.getString("kek") + "</h1></html>");
-    private final JLabel hungerFromTo = new JLabel(bundle.getString("hunger"));
-    private final JTextField hungerTo = new JTextField();
-    private final JLabel size = new JLabel(bundle.getString("size") + ":");
-    private final JLabel sizeText = new JLabel(bundle.getString("size") + ":");
-    private final JLabel xFrom = new JLabel("0");
+    private final JButton addButton = new JButton(bundle.getString("addButton"));
+    private final JButton toAddButton = new JButton(bundle.getString("toAddButton"));
+    private final JButton updateButton = new JButton(bundle.getString("updateButton"));
+    private final JButton exitButton = new JButton(bundle.getString("exitButton"));
 
-    private final JSlider xFromSlider = new JSlider();
-    private final JSlider yFromSlider = new JSlider();
-    private final JSlider sizeFromSlider = new JSlider();
-
-    private final JButton changeButton = new JButton(bundle.getString("change"));
-    private final JButton newCreatureButton = new JButton(bundle.getString("newCreature"));
-    private final JButton addButton = new JButton(bundle.getString("add"));
-    private final JButton clearButton = new JButton(bundle.getString("clear"));
-    private final JButton addIfMaxButton = new JButton(bundle.getString("add_if_max"));
-    private final JButton removeButton = new JButton(bundle.getString("remove"));
-    private final JButton cancelButton = new JButton(bundle.getString("cancel"));
-    private final JButton refreshButton = new JButton(bundle.getString("refresh"));
 
     JPanel p4extended;
-    JPanel p1,p2,p3,p4;
+    JPanel filterPanel,p3, sidePanel;
 
-    private JComboBox<String> locationBox;
     private JComboBox<String> locationComboBox;
     private JComboBox<String> colorComboBox;
-    private Movie chosenCreature;
     private final DateTimeFormatter filterDateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yy HH:mm:ss");
 
     private final Font font1 = new Font("Calibri", Font.BOLD, 16);
@@ -109,8 +94,8 @@ class MainFrame extends AbstractFrame {
         Scanner sc = new Scanner(System.in);
         Console console = new Console(sc, true);
         CommandManager cm = new CommandManager(console, client, "client.cfg");
-        Frame f = new MainFrame(cm, Color.BLUE, "jw");
-        f.setVisible(true);
+        //Frame f = new MainFrame(cm, Color.BLUE, "jw");
+        //f.setVisible(true);
     }
 
     protected void updateLabels() {
@@ -119,40 +104,11 @@ class MainFrame extends AbstractFrame {
         language.setText(bundle.getString("language"));
     }
 
-    public MainFrame(CommandManager cm, Color color, String login) {
+    public MainFrame(CommandManager cm, String login) {
         super(cm);
-        layoutFrame();
-        CommandResponse cRes = cm.runCommand("$get");
-
-        @SuppressWarnings("unchecked")
-        PriorityQueue<Movie> pq = (PriorityQueue<Movie>) cRes.getObject();
-        refreshTable(pq);
-    }
-
-    private void checkFilters() {
-        if (!xTo.getText().isEmpty() && (notANumeric(xTo.getText()) || (Integer.valueOf(xTo.getText()) > 1000 || Integer.valueOf(xTo.getText()) < 0)))
-            printText(bundle.getString("incorrectX"), true);
-        else if (!yTo.getText().isEmpty() && (notANumeric(yTo.getText()) || (Integer.valueOf(yTo.getText()) > 1000 || Integer.valueOf(yTo.getText()) < 0)))
-            printText(bundle.getString("incorrectY"), true);
-        else if (!sizeTo.getText().isEmpty() && (notANumeric(sizeTo.getText()) || (Integer.valueOf(sizeTo.getText()) < 10 || Integer.valueOf(sizeTo.getText()) > 99)))
-            printText(bundle.getString("incorrectSize"), true);
-        else if (!hungerTo.getText().isEmpty() && (notANumeric(hungerTo.getText()) || Integer.valueOf(hungerTo.getText()) < 1))
-            printText(bundle.getString("incorrectHunger"), true);
-        else if (!timeTo.getText().isEmpty()) {
-            try {
-                filterDateTimeFormatter.parse(timeTo.getText());
-                printText("", false);
-                //applyFilters();
-            } catch (DateTimeParseException e) {
-                printText(bundle.getString("incorrectDate") + ": dd.MM.yy HH:mm:ss!", true);
-            }
-
-        } else {
-            boolean isFiltered = true;
-            if (isFiltered)
-                printText("", false);
-            //applyFilters();
-        }
+        this.login = login;
+        layoutFrame(login);
+        refreshTable(getCollection());
     }
 
     private boolean notANumeric(String str) {
@@ -163,6 +119,13 @@ class MainFrame extends AbstractFrame {
         if (isError) infoText.setForeground(Color.RED);
         else infoText.setForeground(Color.GREEN);
         infoText.setText(message);
+    }
+
+    private PriorityQueue<Movie> getCollection() {
+        CommandResponse cRes = cm.runCommand("$get");
+        @SuppressWarnings("unchecked")
+        PriorityQueue<Movie> pq = (PriorityQueue<Movie>) cRes.getObject();
+        return pq;
     }
 
     private void refreshTable(PriorityQueue<Movie> pq) {
@@ -178,21 +141,109 @@ class MainFrame extends AbstractFrame {
 
     private void addToTable(Movie m) {
         tableModel.addRow(new Object[] {
-            m.getId(), m.getUsername(), m.getName()
+            m.getId(), m.getUsername(), m.getName(), m.getCreationDate(), m.getMovieGenre(),
+                m.getMpaaRating(), m.getOscarsCount(), m.getCoordinates().getX(), m.getCoordinates().getY()
         });
     }
 
-    private void layoutFrame() {
+    private void initListeners() {
+        exitButton.addActionListener(event -> new Thread(() -> {
+            cm.runCommand("/sign_out");
+            dispose();
+            AuthFrame authFrame = new AuthFrame(cm);
+            authFrame.display();
+        }).start());
+
+        addButton.addActionListener(event -> new Thread(() -> {
+            Queue<String> input = new ArrayDeque<>();
+            input.add(nameField.getText());
+            input.add(xField.getText());
+            input.add(yField.getText());
+            input.add(Objects.requireNonNull(oscarsComboBox.getSelectedItem()).toString());
+            input.add(Objects.requireNonNull(genreComboBox.getSelectedItem()).toString());
+            input.add(Objects.requireNonNull(ratingComboBox.getSelectedItem()).toString());
+            input.add("Director name");
+            input.add("1");
+            input.add("WHITE");
+            input.add("1");
+            input.add("1");
+            input.add("Location name");
+            cm.setInputValues(input);
+            CommandResponse cRes = cm.runCommand("add");
+            if (cRes.getExitCode() == 0) {
+                refreshTable(getCollection());
+                clearRightPanel();
+            } else {
+                System.out.println(cRes.getExitCode() + " " + cRes.getMessage());
+            }
+            updateButton.setEnabled(true);
+        }).start());
+
+        toAddButton.addActionListener(event -> new Thread(this::setAddModeRightPanel).start());
+
+        updateButton.addActionListener(event -> new Thread(() -> {
+            updateButton.setEnabled(false);
+            Queue<String> input = new ArrayDeque<>();
+            input.add(nameField.getText());
+            input.add(xField.getText());
+            input.add(yField.getText());
+            input.add(Objects.requireNonNull(oscarsComboBox.getSelectedItem()).toString());
+            input.add(Objects.requireNonNull(genreComboBox.getSelectedItem()).toString());
+            input.add(Objects.requireNonNull(ratingComboBox.getSelectedItem()).toString());
+            input.add("<");
+            input.add("<");
+            input.add("<");
+            input.add("<");
+            input.add("<");
+            input.add("<");
+            cm.setInputValues(input);
+            CommandResponse cRes = cm.runCommand("update", idField.getText());
+            if (cRes.getExitCode() == 0) {
+                refreshTable(getCollection());
+            }
+            updateButton.setEnabled(true);
+        }).start());
+
+        // double value validator
+        xField.addKeyListener(new KeyAdapter() {
+            public void keyTyped(KeyEvent e) {
+                char c = e.getKeyChar();
+                if (!
+                        ((c >= '1' && c <= '9') ||
+                        (c == '0' && !xField.getText().isEmpty()) ||
+                        (c == '-' && !xField.getText().contains("-")) ||
+                        (c == '.' && !xField.getText().isEmpty() && !xField.getText().contains(".")) ||
+                        (c == KeyEvent.VK_BACK_SPACE))
+                ){
+                    e.consume();  // if it's not a digit or dot, ignore the event
+                }
+            }
+        });
+
+        // integer value validator
+        yField.addKeyListener(new KeyAdapter() {
+            public void keyTyped(KeyEvent e) {
+                char c = e.getKeyChar();
+                if (!
+                        ((c >= '1' && c <= '9') ||
+                        (c == '0' && !yField.getText().isEmpty()) ||
+                        (c == '-' && !yField.getText().contains("-")) ||
+                        (c == KeyEvent.VK_BACK_SPACE))
+                ){
+                    e.consume();  // if it's not a digit, ignore the event
+                }
+            }
+        });
+    }
+
+    private void layoutFrame(String login) {
         initElements();
         createPanels();
-        initListeners();
 
-        String login = "jw";
         JLabel loginInfo = new JLabel(bundle.getString("user") + ": " + login);
 
         JPanel userInfo = new JPanel();
         userInfo.setLayout(new BoxLayout(userInfo, BoxLayout.X_AXIS));
-        JButton exitButton = new JButton(bundle.getString("exitButton"));
         exitButton.setAlignmentX(JComponent.RIGHT_ALIGNMENT);
         loginInfo.setAlignmentX(JComponent.RIGHT_ALIGNMENT);
         userInfo.add(Box.createHorizontalGlue());
@@ -203,13 +254,13 @@ class MainFrame extends AbstractFrame {
 
         JPanel p3extended = new JPanel();
         p3extended.setLayout(new BorderLayout());
-        p3extended.add(p2, BorderLayout.NORTH);
+        p3extended.add(filterPanel, BorderLayout.NORTH);
         p3extended.add(p3, BorderLayout.CENTER);
 
         p4extended = new JPanel();
         p4extended.setLayout(new BoxLayout(p4extended, BoxLayout.X_AXIS));
         p4extended.add(Box.createRigidArea(new Dimension(15, 0)));
-        p4extended.add(p4);
+        p4extended.add(sidePanel);
         p4extended.add(Box.createRigidArea(new Dimension(10, 0)));
         p4extended.setBorder(BorderFactory.createMatteBorder(0, 2, 0, 0, Color.BLACK));
 
@@ -221,227 +272,192 @@ class MainFrame extends AbstractFrame {
         setSize(1500, 800);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setVisible(true);
-    }
 
-    private void initListeners() {
+        initListeners();
     }
 
     private void createTable() {
         String[] columns = {
-                "Id", "Author", "Name"};
+                "Id", "Author", "Name", "Creation Date", "Genre", "Rating", "Oscars", "X", "Y"
+        };
+
         tableModel = new MyDefaultTableModel();
         tableModel.setColumnIdentifiers(columns);
         table = new JTable(tableModel);
+        table.setAutoCreateRowSorter(true);
         DefaultTableCellRenderer renderer = new DefaultTableCellRenderer();
-        renderer.setHorizontalAlignment(SwingConstants.LEFT);
+        renderer.setHorizontalAlignment(SwingConstants.CENTER);
         for (int columnIndex = 0; columnIndex < tableModel.getColumnCount(); columnIndex++)
             table.getColumnModel().getColumn(columnIndex).setCellRenderer(renderer);
-        TableRowSorter<TableModel> sorter = new TableRowSorter<>(table.getModel());
-        table.setRowSorter(sorter);
-        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        table.getColumnModel().getColumn(0).setPreferredWidth(120);
-        table.getColumnModel().getColumn(1).setPreferredWidth(120);
-        table.getColumnModel().getColumn(2).setPreferredWidth(120);
-//        table.getColumnModel().getColumn(3).setPreferredWidth(120);
-//        table.getColumnModel().getColumn(4).setPreferredWidth(120);
-//        table.getColumnModel().getColumn(5).setPreferredWidth(120);
-//        table.getColumnModel().getColumn(6).setPreferredWidth(120);
-//        table.getColumnModel().getColumn(7).setPreferredWidth(120);
-//        table.getColumnModel().getColumn(8).setPreferredWidth(120);
 
-//        table.getSelectionModel().addListSelectionListener(e -> {
-//            if (!clearSelection) {
-//                new Thread(() -> {
-//                    //cancel();
-//                    int index = table.getSelectedRow();
-//                    String name = (String) table.getModel().getValueAt(index, 0);
-//                    String family = (String) table.getModel().getValueAt(index, 1);
-////                    for (Creature cr : creatureList) {
-////                        if (cr.getName().equals(name) && cr.getFamily().equals(family)) {
-////                            setCreatureInfo(cr);
-////                            break;
-////                        }
-////                    }
-//                }).start();
-//            }
-//        });
+        // sorting table
+        TableRowSorter<TableModel> sorter = new TableRowSorter<>(table.getModel());
+
+        Comparator<Integer> integerComparator = Comparator.comparingInt(value -> value);
+        Comparator<Long> longComparator = Comparator.comparingLong(value -> value);
+        Comparator<Float> doubleComparator = Comparator.comparingDouble(value -> (double) value);
+        Comparator<? extends Enum<?>> enumComparator = Comparator.comparing(Enum::name);
+        Comparator<LocalDate> localDateComparator = Comparator.comparing(date -> date,
+                (date1, date2) -> {
+                    if (date1.isBefore(date2)) {return -1;}
+                    else if (date1.isEqual(date2)) {return 0;}
+                    else {return 1;}
+                });
+
+        sorter.setComparator(table.getColumnModel().getColumnIndex("Id"), integerComparator);
+        sorter.setComparator(table.getColumnModel().getColumnIndex("X"), doubleComparator);
+        sorter.setComparator(table.getColumnModel().getColumnIndex("Y"), longComparator);
+        sorter.setComparator(table.getColumnModel().getColumnIndex("Genre"), enumComparator);
+        sorter.setComparator(table.getColumnModel().getColumnIndex("Rating"), enumComparator);
+        sorter.setComparator(table.getColumnModel().getColumnIndex("Creation Date"), localDateComparator);
+
+        table.setRowSorter(sorter);
+
+        List<RowSorter.SortKey> sortKeys = new ArrayList<>(25);
+        sortKeys.add(new RowSorter.SortKey(1, SortOrder.ASCENDING));
+        sorter.setSortKeys(sortKeys);
+
+        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+//        table.getColumnModel().getColumn(table.getColumnModel().getColumnIndex("Id")).setPreferredWidth(10);
+//        table.getColumnModel().getColumn(table.getColumnModel().getColumnIndex("Rating")).setPreferredWidth(15);
+//        table.getColumnModel().getColumn(table.getColumnModel().getColumnIndex("Oscars")).setPreferredWidth(15);
+
+        table.getSelectionModel().addListSelectionListener(event -> {
+            if (!clearSelection) {
+                new Thread(() -> {
+                    int index = table.getSelectedRow();
+                    setRightPanelFields(index);
+                }).start();
+            }
+        });
+    }
+
+    private Map<String, Object> getTableRow(int index) {
+        int columnCount = table.getModel().getColumnCount();
+        Map<String, Object> rowStringValues = new HashMap<>(columnCount);
+        for (int i=0; i < columnCount; i++) {
+            rowStringValues.put(table.getColumnName(i), table.getModel().getValueAt(index, i));
+        }
+        return rowStringValues;
+    }
+
+    private void setRightPanelFields(int index) {
+        addButton.setVisible(false);
+
+        Map<String, Object> rowValues = getTableRow(index);
+        String author = rowValues.get("Author").toString();
+        if (!author.equals(login)) {
+            setEditableRightPanel(false);
+        }
+
+        idField.setText(rowValues.get("Id").toString());
+        authorField.setText(author);
+        nameField.setText(rowValues.get("Name").toString());
+        creationDateField.setText(rowValues.get("Creation Date").toString());
+        genreComboBox.setSelectedItem(rowValues.get("Genre"));
+        ratingComboBox.setSelectedItem(rowValues.get("Rating"));
+        oscarsComboBox.setSelectedItem(rowValues.get("Oscars"));
+        xField.setText(rowValues.get("X").toString());
+        yField.setText(rowValues.get("Y").toString());
+
+        if (author.equals(login)) {
+            setEditableRightPanel(true);
+            statusLabel.setText(bundle.getString("statusUpdate") + " " + bundle.getString("or"));
+            toAddButton.setVisible(true);
+            updateButton.setVisible(true);
+        } else {
+            statusLabel.setText(bundle.getString("statusView") + " " + bundle.getString("or"));
+            toAddButton.setVisible(true);
+            updateButton.setVisible(false);
+        }
+    }
+
+    private JPanel createSmallPanel(JLabel label, JComponent field) {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.X_AXIS));
+        field.setPreferredSize(new Dimension(190, 30));
+        field.setMaximumSize(new Dimension(190, 30));
+        panel.add(Box.createRigidArea(new Dimension(7, 0)));
+        panel.add(label, Component.LEFT_ALIGNMENT);
+        panel.add(Box.createHorizontalGlue());
+        panel.add(field, Component.RIGHT_ALIGNMENT);
+        return panel;
     }
 
     private void createPanels() {
-        JPanel p17 = new JPanel();
-        p17.setMaximumSize(new Dimension(500, 10));
-        p17.setLayout(new GridLayout());
-        p17.add(connectionText);
-        JPanel refreshButtonPanel = new JPanel();
-        refreshButtonPanel.setLayout(new BoxLayout(refreshButtonPanel, BoxLayout.X_AXIS));
-        refreshButtonPanel.add(Box.createRigidArea(new Dimension(50, 0)));
-        refreshButtonPanel.add(refreshButton);
-        p17.add(refreshButton);
+        JPanel statusPanel = new JPanel();
+        statusPanel.setLayout(new BoxLayout(statusPanel, BoxLayout.X_AXIS));
+        statusPanel.add(Box.createRigidArea(new Dimension(0, 70)));
+        statusPanel.add(statusLabel);
+        statusPanel.add(Box.createRigidArea(new Dimension(0, 70)));
+        statusPanel.add(toAddButton);
 
-        JPanel p16 = new JPanel();
-        p16.setLayout(new BorderLayout());
-        p16.setMaximumSize(new Dimension(500, 50));
-        p16.setPreferredSize(new Dimension(500, 50));
-        p16.add(infoText);
+        JPanel idPanel = createSmallPanel(idLabel, idField);
+        JPanel authorPanel = createSmallPanel(authorLabel, authorField);
+        JPanel namePanel = createSmallPanel(nameLabel, nameField);
+        JPanel creationDatePanel = createSmallPanel(creationDateLabel, creationDateField);
+        JPanel genrePanel = createSmallPanel(genreLabel, genreComboBox);
+        JPanel ratingPanel = createSmallPanel(ratingLabel, ratingComboBox);
+        JPanel oscarsPanel = createSmallPanel(oscarsLabel, oscarsComboBox);
+        JPanel xPanel = createSmallPanel(xLabel, xField);
+        JPanel yPanel = createSmallPanel(yLabel, yField);
 
-        JPanel p15 = new JPanel();
-        p15.setLayout(new BoxLayout(p15, BoxLayout.X_AXIS));
-        infoConnectionText.setAlignmentX(Component.CENTER_ALIGNMENT);
-        p15.add(infoConnectionText);
 
-        JPanel p13 = new JPanel();
-        p13.setLayout(new BoxLayout(p13, BoxLayout.X_AXIS));
-        p13.add(Box.createRigidArea(new Dimension(0, 70)));
-        p13.add(infoObjectText);
+//        JPanel p5 = new JPanel();
+//        p5.setLayout(new BoxLayout(p5, BoxLayout.X_AXIS));
+//        p5.add(updateButton);
+//        p5.add(Box.createRigidArea(new Dimension(5, 0)));
+//        p5.add(newCreatureButton);
+//        p5.add(Box.createRigidArea(new Dimension(5, 0)));
+//        p5.add(clearButton);
+//        p5.add(Box.createRigidArea(new Dimension(5, 0)));
+//        p5.add(cancelButton);
+//
+//        JPanel p55 = new JPanel();
+//        p55.setLayout(new BoxLayout(p55, BoxLayout.X_AXIS));
+//        p55.add(addButton);
+//        p55.add(Box.createRigidArea(new Dimension(10, 0)));
+//        p55.add(addIfMaxButton);
+//        p55.add(Box.createRigidArea(new Dimension(10, 0)));
+//        p55.add(removeButton);
 
-        JPanel p12 = new JPanel();
-        p12.setLayout(new BoxLayout(p12, BoxLayout.X_AXIS));
-        nameValue.setPreferredSize(new Dimension(190, 30));
-        nameValue.setMaximumSize(new Dimension(190, 30));
-        p12.add(Box.createRigidArea(new Dimension(7, 0)));
-        p12.add(nameText, Component.LEFT_ALIGNMENT);
-        p12.add(Box.createHorizontalGlue());
-        p12.add(nameValue, Component.RIGHT_ALIGNMENT);
+        sidePanel = new JPanel();
+        sidePanel.setLayout(new BoxLayout(sidePanel, BoxLayout.Y_AXIS));
+        sidePanel.setPreferredSize(new Dimension(350, 1000));
+        sidePanel.setMaximumSize(new Dimension(350, 1000));
+        sidePanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        sidePanel.add(statusPanel);
+        sidePanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        sidePanel.add(idPanel);
+        sidePanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        sidePanel.add(authorPanel);
+        sidePanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        sidePanel.add(namePanel);
+        sidePanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        sidePanel.add(creationDatePanel);
+        sidePanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        sidePanel.add(genrePanel);
+        sidePanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        sidePanel.add(ratingPanel);
+        sidePanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        sidePanel.add(oscarsPanel);
+        sidePanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        sidePanel.add(xPanel);
+        sidePanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        sidePanel.add(yPanel);
+        sidePanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        sidePanel.add(addButton);
+        sidePanel.add(updateButton);
+//        p55.setLayout(new BoxLayout(p55, BoxLayout.X_AXIS));
+//        p55.add(addButton);
+//        p55.add(Box.createRigidArea(new Dimension(10, 0)));
+//        p55.add(addIfMaxButton);
 
-        JPanel p11 = new JPanel();
-        p11.setLayout(new BoxLayout(p11, BoxLayout.X_AXIS));
-        familyValue.setPreferredSize(new Dimension(190, 30));
-        familyValue.setMaximumSize(new Dimension(190, 30));
-        p11.add(Box.createRigidArea(new Dimension(7, 0)));
-        p11.add(familyText, Component.LEFT_ALIGNMENT);
-        p11.add(Box.createHorizontalGlue());
-        p11.add(familyValue, Component.RIGHT_ALIGNMENT);
 
-        JPanel p111 = new JPanel();
-        p111.setLayout(new BoxLayout(p111, BoxLayout.X_AXIS));
-        hungerValue.setPreferredSize(new Dimension(190, 30));
-        hungerValue.setMaximumSize(new Dimension(190, 30));
-        p111.add(Box.createRigidArea(new Dimension(7, 0)));
-        p111.add(hungerText, Component.LEFT_ALIGNMENT);
-        p111.add(Box.createHorizontalGlue());
-        p111.add(hungerValue, Component.RIGHT_ALIGNMENT);
-
-        JPanel p10 = new JPanel();
-        p10.setLayout(new BoxLayout(p10, BoxLayout.X_AXIS));
-        timeValue.setPreferredSize(new Dimension(190, 30));
-        timeValue.setMaximumSize(new Dimension(190, 30));
-        p10.add(Box.createRigidArea(new Dimension(7, 0)));
-        p10.add(timeText, Component.LEFT_ALIGNMENT);
-        p10.add(Box.createHorizontalGlue());
-        p10.add(timeValue, Component.RIGHT_ALIGNMENT);
-
-        JPanel p9 = new JPanel();
-        p9.setLayout(new BoxLayout(p9, BoxLayout.X_AXIS));
-        locationBox.setPreferredSize(new Dimension(190, 30));
-        locationBox.setMaximumSize(new Dimension(190, 30));
-        p9.add(Box.createRigidArea(new Dimension(7, 0)));
-        p9.add(locationText, Component.LEFT_ALIGNMENT);
-        p9.add(Box.createHorizontalGlue());
-        p9.add(locationBox, Component.RIGHT_ALIGNMENT);
-
-        JPanel p99 = new JPanel();
-        p99.setLayout(new BoxLayout(p99, BoxLayout.X_AXIS));
-        colorValue.setPreferredSize(new Dimension(190, 30));
-        colorValue.setMaximumSize(new Dimension(190, 30));
-        p99.add(Box.createRigidArea(new Dimension(7, 0)));
-        p99.add(colorText, Component.LEFT_ALIGNMENT);
-        p99.add(Box.createHorizontalGlue());
-        p99.add(colorValue, Component.RIGHT_ALIGNMENT);
-
-        JPanel p999 = new JPanel();
-        p999.setLayout(new BoxLayout(p999, BoxLayout.X_AXIS));
-        p999.add(Box.createRigidArea(new Dimension(7, 0)));
-        p999.add(inventoryText, Component.LEFT_ALIGNMENT);
-        p999.add(Box.createHorizontalGlue());
-        inventoryValue.setPreferredSize(new Dimension(190, 30));
-        inventoryValue.setMaximumSize(new Dimension(190, 30));
-        p999.add(inventoryValue, Component.RIGHT_ALIGNMENT);
-
-        JPanel p8 = new JPanel();
-        p8.setLayout(new BoxLayout(p8, BoxLayout.X_AXIS));
-        xFromSlider.setMaximumSize(new Dimension(150, 17));
-        JLabel x = new JLabel("X:");
-        p8.add(x, Component.LEFT_ALIGNMENT);
-        p8.add(Box.createRigidArea(new Dimension(100, 10)));
-        p8.add(xFromSlider);
-        p8.add(Box.createHorizontalGlue());
-        p8.add(xFrom, Component.RIGHT_ALIGNMENT);
-
-        JPanel p7 = new JPanel();
-        p7.setLayout(new BoxLayout(p7, BoxLayout.X_AXIS));
-        yFromSlider.setMaximumSize(new Dimension(150, 17));
-        JLabel y = new JLabel("Y:");
-        p7.add(y, Component.LEFT_ALIGNMENT);
-        p7.add(Box.createRigidArea(new Dimension(100, 10)));
-        p7.add(yFromSlider);
-        p7.add(Box.createHorizontalGlue());
-        //p7.add(yFrom, Component.RIGHT_ALIGNMENT);
-
-        JPanel p6 = new JPanel();
-        p6.setLayout(new BoxLayout(p6, BoxLayout.X_AXIS));
-        sizeFromSlider.setMaximumSize(new Dimension(250, 17));
-        p6.add(size, Component.LEFT_ALIGNMENT);
-        p6.add(Box.createHorizontalGlue());
-        p6.add(sizeFromSlider);
-        p6.add(Box.createRigidArea(new Dimension(25, 0)));
-        //p6.add(sizeFrom, Component.RIGHT_ALIGNMENT);
-
-        JPanel p5 = new JPanel();
-        p5.setLayout(new BoxLayout(p5, BoxLayout.X_AXIS));
-        p5.add(changeButton);
-        p5.add(Box.createRigidArea(new Dimension(5, 0)));
-        p5.add(newCreatureButton);
-        p5.add(Box.createRigidArea(new Dimension(5, 0)));
-        p5.add(clearButton);
-        p5.add(Box.createRigidArea(new Dimension(5, 0)));
-        p5.add(cancelButton);
-
-        JPanel p55 = new JPanel();
-        p55.setLayout(new BoxLayout(p55, BoxLayout.X_AXIS));
-        p55.add(addButton);
-        p55.add(Box.createRigidArea(new Dimension(10, 0)));
-        p55.add(addIfMaxButton);
-        p55.add(Box.createRigidArea(new Dimension(10, 0)));
-        p55.add(removeButton);
-
-        p4 = new JPanel();
-        p4.setLayout(new BoxLayout(p4, BoxLayout.Y_AXIS));
-        p4.setPreferredSize(new Dimension(350, 1000));
-        p4.setMaximumSize(new Dimension(350, 1000));
-        p4.add(Box.createRigidArea(new Dimension(0, 10)));
-        p4.add(p17);
-        p4.add(Box.createRigidArea(new Dimension(0, 10)));
-        p4.add(p16);
-        p4.add(Box.createRigidArea(new Dimension(0, 10)));
-        p15.setAlignmentX(Component.CENTER_ALIGNMENT);
-        p4.add(p15);
-        p4.add(Box.createVerticalGlue());
-        p4.add(p13);
-        p4.add(Box.createRigidArea(new Dimension(0, 10)));
-        p4.add(p12);
-        p4.add(Box.createRigidArea(new Dimension(0, 5)));
-        p4.add(p11);
-        p4.add(Box.createRigidArea(new Dimension(0, 5)));
-        p4.add(p111);
-        p4.add(Box.createRigidArea(new Dimension(0, 5)));
-        p4.add(p10);
-        p4.add(Box.createRigidArea(new Dimension(0, 5)));
-        p4.add(p9);
-        p4.add(Box.createRigidArea(new Dimension(0, 5)));
-        p4.add(p99);
-        p4.add(Box.createRigidArea(new Dimension(0, 5)));
-        p4.add(p999);
-        p4.add(Box.createRigidArea(new Dimension(0, 30)));
-        p4.add(p8);
-        p4.add(Box.createRigidArea(new Dimension(0, 10)));
-        p4.add(p7);
-        p4.add(Box.createRigidArea(new Dimension(0, 10)));
-        p4.add(p6);
-        p4.add(Box.createRigidArea(new Dimension(0, 10)));
-        p4.add(p5);
-        p4.add(Box.createRigidArea(new Dimension(0, 10)));
-        p4.add(p55);
-        p4.add(Box.createRigidArea(new Dimension(0, 10)));
+//        rightPanel.add(p5);
+//        rightPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+//        rightPanel.add(p55);
+//        rightPanel.add(Box.createRigidArea(new Dimension(0, 10)));
 
         JScrollPane scrollPane = new JScrollPane(table);
         JPanel tablePanel = new JPanel();
@@ -467,88 +483,126 @@ class MainFrame extends AbstractFrame {
                     int index = sourceTabbedPane.getSelectedIndex();
                     //cancel();
                     if (index == 0) {
-                        isTable = true;
-                        nameTo.setEnabled(true);
-                        familyTo.setEnabled(true);
-                        hungerTo.setEnabled(true);
-                        timeTo.setEnabled(true);
+                        nameFilter.setEnabled(true);
+                        creationDateFilter.setEnabled(true);
+                        genreFilter.setEnabled(true);
                         locationComboBox.setEnabled(true);
-                        xTo.setEnabled(true);
-                        yTo.setEnabled(true);
-                        sizeTo.setEnabled(true);
+                        ratingFilter.setEnabled(true);
                         colorComboBox.setEnabled(true);
                     } else {
-                        isTable = false;
                         clearSelection = true;
                         table.getSelectionModel().clearSelection();
                         clearSelection = false;
-                        nameTo.setEnabled(false);
-                        familyTo.setEnabled(false);
-                        hungerTo.setEnabled(false);
-                        timeTo.setEnabled(false);
+                        nameFilter.setEnabled(false);
+                        creationDateFilter.setEnabled(false);
+                        genreFilter.setEnabled(false);
                         locationComboBox.setEnabled(false);
-                        xTo.setEnabled(false);
-                        yTo.setEnabled(false);
-                        sizeTo.setEnabled(false);
+                        ratingFilter.setEnabled(false);
                         colorComboBox.setEnabled(false);
                     }
                 }).start());
 
         //Panels
-        p2 = new JPanel();
-        p2.setLayout(new BoxLayout(p2, BoxLayout.X_AXIS));
-        nameTo.setMaximumSize(new Dimension(119, 50));
-        nameTo.setPreferredSize(new Dimension(119, 30));
-        p2.add(nameTo);
-        p2.add(Box.createRigidArea(new Dimension(5, 0)));
-        familyTo.setMaximumSize(new Dimension(119, 50));
-        familyTo.setPreferredSize(new Dimension(119, 30));
-        p2.add(familyTo);
-        p2.add(Box.createRigidArea(new Dimension(5, 0)));
-        hungerTo.setMaximumSize(new Dimension(118, 50));
-        hungerTo.setPreferredSize(new Dimension(118, 30));
-        p2.add(hungerTo);
-        p2.add(Box.createRigidArea(new Dimension(5, 0)));
-        timeTo.setMaximumSize(new Dimension(118, 50));
-        timeTo.setPreferredSize(new Dimension(118, 30));
-        p2.add(timeTo);
-        p2.add(Box.createRigidArea(new Dimension(5, 0)));
-        locationComboBox.setMaximumSize(new Dimension(118, 50));
-        locationComboBox.setPreferredSize(new Dimension(118, 30));
-        p2.add(locationComboBox);
-        p2.add(Box.createRigidArea(new Dimension(5, 0)));
-        xTo.setMaximumSize(new Dimension(118, 50));
-        xTo.setPreferredSize(new Dimension(118, 30));
-        p2.add(xTo);
-        p2.add(Box.createRigidArea(new Dimension(5, 0)));
-        yTo.setMaximumSize(new Dimension(118, 50));
-        yTo.setPreferredSize(new Dimension(118, 30));
-        p2.add(yTo);
-        p2.add(Box.createRigidArea(new Dimension(5, 0)));
-        sizeTo.setMaximumSize(new Dimension(118, 50));
-        sizeTo.setPreferredSize(new Dimension(118, 30));
-        p2.add(sizeTo);
-        p2.add(Box.createRigidArea(new Dimension(5, 0)));
-        colorComboBox.setMaximumSize(new Dimension(118, 50));
-        colorComboBox.setPreferredSize(new Dimension(118, 30));
-        p2.add(colorComboBox);
-        p2.add(Box.createHorizontalGlue());
-        p2.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, Color.BLACK));
+        filterPanel = new JPanel();
+        filterPanel.setLayout(new BoxLayout(filterPanel, BoxLayout.X_AXIS));
+
+        idFilter.setMaximumSize(new Dimension(119, 50));
+        idFilter.setPreferredSize(new Dimension(119, 30));
+        filterPanel.add(idFilter);
+
+        authorFilter.setMaximumSize(new Dimension(119, 50));
+        authorFilter.setPreferredSize(new Dimension(119, 30));
+        filterPanel.add(authorFilter);
+
+        nameFilter.setMaximumSize(new Dimension(119, 50));
+        nameFilter.setPreferredSize(new Dimension(119, 30));
+        filterPanel.add(nameFilter);
+
+        filterPanel.add(Box.createRigidArea(new Dimension(5, 0)));
+        creationDateFilter.setMaximumSize(new Dimension(119, 50));
+        creationDateFilter.setPreferredSize(new Dimension(119, 30));
+        filterPanel.add(creationDateFilter);
+
+        filterPanel.add(Box.createRigidArea(new Dimension(5, 0)));
+        genreFilter.setMaximumSize(new Dimension(119, 50));
+        genreFilter.setPreferredSize(new Dimension(119, 30));
+        filterPanel.add(genreFilter);
+
+        filterPanel.add(Box.createRigidArea(new Dimension(5, 0)));
+        ratingFilter.setMaximumSize(new Dimension(119, 50));
+        ratingFilter.setPreferredSize(new Dimension(119, 30));
+        filterPanel.add(ratingFilter);
+
+        filterPanel.add(Box.createRigidArea(new Dimension(5, 0)));
+        oscarsFilter.setMaximumSize(new Dimension(119, 50));
+        oscarsFilter.setPreferredSize(new Dimension(119, 30));
+        filterPanel.add(oscarsFilter);
+
+        filterPanel.add(Box.createRigidArea(new Dimension(5, 0)));
+        xFilter.setMaximumSize(new Dimension(119, 50));
+        xFilter.setPreferredSize(new Dimension(119, 30));
+        filterPanel.add(xFilter);
+
+        filterPanel.add(Box.createRigidArea(new Dimension(5, 0)));
+        yFilter.setMaximumSize(new Dimension(119, 50));
+        yFilter.setPreferredSize(new Dimension(119, 30));
+        filterPanel.add(yFilter);
+
+        filterPanel.add(Box.createHorizontalGlue());
+        filterPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, Color.BLACK));
 
         JPanel pInfoExtended = new JPanel();
         pInfoExtended.setLayout(new BorderLayout());
+    }
+
+    private void setEditableRightPanel(boolean b) {
+        idField.setEditable(false);
+        authorField.setEditable(false);
+        nameField.setEditable(b);
+        creationDateField.setEditable(false);
+
+        genreComboBox.setEditable(false);
+        genreComboBox.setEnabled(b);
+        ratingComboBox.setEditable(false);
+        ratingComboBox.setEnabled(b);
+        oscarsComboBox.setEditable(false);
+        oscarsComboBox.setEnabled(b);
+
+        xField.setEditable(b);
+        yField.setEditable(b);
+    }
+
+    private void clearRightPanel() {
+        nameField.setText("");
+        genreComboBox.setSelectedIndex(0);
+        ratingComboBox.setSelectedIndex(0);
+        oscarsComboBox.setSelectedIndex(0);
+        xField.setText("");
+        yField.setText("");
+    }
+
+    private void setAddModeRightPanel() {
+        if (clearSelection) {
+            table.getSelectionModel().clearSelection();
+            clearSelection = false;
+        }
+        clearRightPanel();
+        statusLabel.setText(bundle.getString("statusAdd"));
+        toAddButton.setVisible(false);
+        updateButton.setVisible(false);
+        addButton.setVisible(true);
+        setEditableRightPanel(true);
+        idField.setText(bundle.getString("defaultAddField"));
+        authorField.setText(login);
+        creationDateField.setText(bundle.getString("defaultAddField"));
     }
 
     private void initElements() {
         DateTimeFormatter displayDateTimeFormatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT, FormatStyle.MEDIUM).withLocale(
                 bundle.getMyLocale().getLocale());
 
-        nameValue.setEditable(false);
-        familyValue.setEditable(false);
-        hungerValue.setEditable(false);
-        timeValue.setEditable(false);
-        colorValue.setEditable(false);
-        inventoryValue.setEditable(false);
+        setAddModeRightPanel();
+
         JTextField xValue = new JTextField();
         xValue.setEditable(false);
         JTextField yValue = new JTextField();
@@ -570,10 +624,7 @@ class MainFrame extends AbstractFrame {
         infoText.setFont(font);
         infoText.setForeground(Color.GREEN);
 
-        timeTo.setToolTipText(bundle.getString("format") + ": dd.MM.yy HH:mm:ss");
-        xFromSlider.setMinimum(0);
-        xFromSlider.setMaximum(1000);
-        xFromSlider.setValue(0);
+        genreFilter.setToolTipText(bundle.getString("format") + ": dd.MM.yy HH:mm:ss");
 
         String topFloorComboBox = bundle.getString("TopFloor");
         String groundFloorComboBox = bundle.getString("GroundFloor");
@@ -624,12 +675,28 @@ class MainFrame extends AbstractFrame {
                 otherComboBox
         };
 
-        locationBox = new JComboBox<>(locationsArray1);
+        JComboBox<String> locationBox = new JComboBox<>(locationsArray1);
         locationBox.setEditable(false);
         locationBox.setEnabled(false);
         locationComboBox = new JComboBox<>(locationsArray);
         colorComboBox = new JComboBox<>(colorsArray);
 
+        nameFilter.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                applyFilters();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                applyFilters();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                applyFilters();
+            }
+        });
 //        nameTo.getDocument().addDocumentListener((FiltersListener) this::checkFilters);
 //        familyTo.getDocument().addDocumentListener((FiltersListener) this::checkFilters);
 //        hungerTo.getDocument().addDocumentListener((FiltersListener) this::checkFilters);
@@ -637,10 +704,19 @@ class MainFrame extends AbstractFrame {
 //        xTo.getDocument().addDocumentListener((FiltersListener) this::checkFilters);
 //        yTo.getDocument().addDocumentListener((FiltersListener) this::checkFilters);
 //        sizeTo.getDocument().addDocumentListener((FiltersListener) this::checkFilters);
-        final ActionListener actionListener = e -> new Thread(this::checkFilters).start();
-        colorComboBox.addActionListener(actionListener);
-        locationComboBox.addActionListener(actionListener);
+        //final ActionListener actionListener = e -> new Thread(this::checkFilters).start();
+        //colorComboBox.addActionListener(actionListener);
+        //locationComboBox.addActionListener(actionListener);
 
         createTable();
+    }
+
+    private void applyFilters() {
+        PriorityQueue<Movie> filteredList = new PriorityQueue<>();
+        getCollection().stream()
+                .filter(movie -> movie.getName().startsWith(nameFilter.getText()))
+                .forEach(filteredList::add);
+
+        refreshTable(filteredList);
     }
 }
