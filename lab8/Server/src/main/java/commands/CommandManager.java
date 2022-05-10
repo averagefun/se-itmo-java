@@ -202,8 +202,8 @@ public class CommandManager {
         putCommand("add", true, (username, count, argObject) -> {
             Movie movie = (Movie) argObject;
             return mc.addMovie(movie, username) ?
-                    new CommandResponse("Successfully added element!") :
-                    new CommandResponse(10, "Error occurred while adding element: element did not add.");
+                    new CommandResponse("successfullyAdd") :
+                    new CommandResponse(10, "errorAdd");
         });
 
         putCommand("update", true, (username, count, argObject) -> {

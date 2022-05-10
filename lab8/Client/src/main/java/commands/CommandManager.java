@@ -340,4 +340,11 @@ public class CommandManager {
             return getResponseFromServer(name, id);
         });
     }
+
+    public PriorityQueue<Movie> getServerCollection() {
+        CommandResponse cRes = runCommand("$get");
+        @SuppressWarnings("unchecked")
+        PriorityQueue<Movie> pq = (PriorityQueue<Movie>) cRes.getObject();
+        return pq;
+    }
 }

@@ -124,8 +124,7 @@ public class Client {
     }
 
     public void guiMode(CommandManager cm) {
-        AuthFrame authFrame = new AuthFrame(cm);
-        authFrame.display();
+        new AuthFrame(cm);
     }
 
     public static void main(String[] args) throws IOException {

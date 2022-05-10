@@ -7,7 +7,6 @@ import exceptions.*;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
-import java.util.NoSuchElementException;
 import java.util.function.Supplier;
 
 /**
@@ -50,20 +49,20 @@ public class InputValidator {
 
     /**
      * Method produce interactive input of current field.
-     * @param text name of field that shows to user
+     * @param fieldName name of field that shows to user
      * @param printMode onn/off hint to users (only need in console mode, no need in execute_file mode)
      * @param valueGetter supplier, that get input field value from different streams (Scanner, File)
      * @return Object, cast to specified type
      * @throws ExecuteScriptFailedException exception show validate error while execute_script
      */
-    public Object interactiveInput(String text, boolean printMode, Supplier<String> valueGetter) throws ExecuteScriptFailedException, CommandInterruptedException {
+    public Object processInput(String fieldName, boolean printMode, Supplier<String> valueGetter) throws ExecuteScriptFailedException, CommandInterruptedException {
         if (printMode) {
             String strInsert = "";
             if (updateMode) {
                 strInsert = " >> " + prevValue;
             }
             while (true) {
-                Console.print("Type " + text + strInsert + " >>> ");
+                Console.print("Type " + fieldName + strInsert + " >>> ");
                 String input;
                 input = valueGetter.get();
                 if (prevValue != null && input.equals("<")) return prevValue;
@@ -80,13 +79,19 @@ public class InputValidator {
                 if (prevValue != null && input.equals("<")) return prevValue;
                 else if (input.equals("#validate_initial")) {
                     return validate((prevValue != null) ? prevValue.toString() : null,
-                            text.substring(0, 1).toUpperCase() + text.substring(1) + ": ",
+                            fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1),
                             false);
                 } else {
-                    return validate(input, null, false);
+                    return validate(input, fieldName.split(" ")[0], false);
                 }
             } catch (ValidateException e) {
-                throw new ExecuteScriptFailedException(e.getMessage());
+                String message = null;
+                if (e.getFieldName() != null && e.getMessage() != null) {
+                    message = e.getFieldName() + "::" + e.getMessage();
+                } else if (e.getMessage() != null) {
+                    message = e.getMessage();
+                }
+                throw new ExecuteScriptFailedException(message);
             }
         }
     }
@@ -102,9 +107,9 @@ public class InputValidator {
      * @return Object, cast to specified type
      * @throws ExecuteScriptFailedException exception show validate error while execute_script
      */
-    public <T extends Enum<T>> Object interactiveInput(String text, T[] enumValues, boolean printMode, Supplier<String> valueGetter) throws ExecuteScriptFailedException {
+    public <T extends Enum<T>> Object processInput(String text, T[] enumValues, boolean printMode, Supplier<String> valueGetter) throws ExecuteScriptFailedException {
         String textNew = text + " " + Arrays.asList(enumValues);
-        return interactiveInput(textNew, printMode, valueGetter);
+        return processInput(textNew, printMode, valueGetter);
     }
 
     /**
@@ -112,7 +117,6 @@ public class InputValidator {
      * @return Object, cast to specified type
      */
     public Object validate(String input, String fieldName, Boolean arg) throws ValidateException {
-        if (fieldName == null) fieldName = "";
         try {
             if (!canBeNull && (input==null || input.trim().isEmpty())) {
                 throw new EmptyEntryException();
@@ -158,15 +162,15 @@ public class InputValidator {
             }
 
         } catch (EmptyEntryException e) {
-            throw new ValidateException(arg ? "Error: No argument find." : fieldName + "Field can't be empty.");
+            throw new ValidateException(arg ? "Error: No argument find." : "emptyField", fieldName);
         } catch (InvalidEnumEntryException e) {
-            throw new ValidateException(arg ? "Argument not one of shown constants." : fieldName + "Input value not one of shown constants.");
+            throw new ValidateException(arg ? "Argument not one of shown constants." : "enumNotMatch", fieldName);
         }
         catch (NumberFormatException e) {
-            throw new ValidateException(arg ? "Argument has wrong number format!" : fieldName + "Invalid number format.");
+            throw new ValidateException(arg ? "Argument has wrong number format!" : "invalidNumberFormat", fieldName);
         } catch (InvalidRangeException e) {
-            throw new ValidateException(arg ? "Argument has wrong number range!" : fieldName + "Invalid number range.");
+            throw new ValidateException(arg ? "Argument has wrong number range!" : "invalidNumberRange", fieldName);
         }
-        throw new ValidateException("Validation error.");
+        throw new ValidateException("Validation error.", fieldName);
     }
 }

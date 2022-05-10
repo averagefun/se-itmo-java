@@ -1,4 +1,4 @@
-package gui;
+package gui.main_frame;
 
 import javax.swing.table.DefaultTableModel;
 

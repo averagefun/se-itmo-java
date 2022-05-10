@@ -9,7 +9,7 @@ import javax.swing.*;
 public abstract class AbstractFrame extends JFrame {
     protected final CommandManager cm;
 
-    protected final static MyBundle bundle = MyBundle.getBundle("gui");
+    public final static MyBundle bundle = MyBundle.getBundle("gui");
     protected final JMenu language = new JMenu(bundle.getString("language"));
 
     protected AbstractFrame(CommandManager cm) {

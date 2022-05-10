@@ -15,4 +15,9 @@ public enum MovieGenre {
         }
         return null;
     }
+
+    @Override
+    public String toString() {
+        return super.toString().toLowerCase();
+    }
 }

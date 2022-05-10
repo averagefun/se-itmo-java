@@ -1,6 +1,7 @@
 package gui;
 
 import commands.CommandManager;
+import gui.main_frame.MainFrame;
 import network.CommandResponse;
 
 import javax.swing.*;
@@ -19,114 +20,9 @@ public class AuthFrame extends AbstractFrame {
     private final JButton logInButton = new JButton(bundle.getString("logInButton"));
     private final JButton signUpButton = new JButton(bundle.getString("signUpButton"));
 
-    public AuthFrame(CommandManager cm) {
-        super(cm);
+    private void makeLayout() {
         initElements();
-        layoutFrame();
-    }
 
-    protected void updateLabels() {
-        setTitle(bundle.getString("titleAuth"));
-
-        language.setText(bundle.getString("language"));
-        usernameLabel.setText(bundle.getString("username"));
-        passwordLabel.setText(bundle.getString("password"));
-        setAuthErrorLabel(authErrorLabelKey);
-
-        logInButton.setText(bundle.getString("logInButton"));
-        signUpButton.setText(bundle.getString("signUpButton"));
-    }
-
-    public void display() {
-        setTitle(bundle.getString("titleAuth"));
-        setSize(360, 240);
-        setResizable(false);
-        setLocationRelativeTo(null);
-        setVisible(true);
-        setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-    }
-
-    private void setAuthErrorLabel(String key) {
-        if (key == null) {
-            authErrorLabelKey = null;
-            authErrorLabel.setVisible(false);
-        } else {
-            authErrorLabelKey = key;
-            String newLabel = bundle.getString(authErrorLabelKey);
-            authErrorLabel.setText(newLabel.isEmpty() ? key : newLabel);
-            authErrorLabel.setVisible(true);
-        }
-    }
-
-    private void initElements() {
-        usernameLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        passwordLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        authErrorLabel.setForeground(Color.RED);
-        usernameField.setPreferredSize(new Dimension(130, 20));
-        passwordField.setPreferredSize(new Dimension(130, 20));
-        authErrorLabel.setVisible(false);
-
-        initButtons();
-        initMenuItems();
-    }
-
-    private void activeAuthInterface(boolean active) {
-        usernameField.setEditable(active);
-        passwordField.setEditable(active);
-        logInButton.setEnabled(active);
-        signUpButton.setEnabled(active);
-    }
-
-    private void buttonCallback(CommandResponse response) {
-        switch (response.getExitCode()) {
-            case 0:
-                // SUCCESS -> close AUTH FRAME, open MAIN FRAME
-                dispose();
-                Frame mainFrame = new MainFrame(cm, usernameField.getText());
-                mainFrame.setVisible(true);
-                break;
-            case 2:
-                setAuthErrorLabel("noConnection");
-                break;
-            case 12:
-                setAuthErrorLabel("emptyUsername");
-                break;
-            default:
-                setAuthErrorLabel(response.getMessage());
-        }
-    }
-
-    private void initButtons() {
-        logInButton.addActionListener(event -> {
-            activeAuthInterface(false);
-            new Thread(() -> {
-                Queue<String> input = new ArrayDeque<>();
-                input.add(usernameField.getText());
-                input.add(new String(passwordField.getPassword()));
-                cm.setInputValues(input);
-                CommandResponse response = cm.runCommand("/sign_in");
-                buttonCallback(response);
-                activeAuthInterface(true);
-            }).start();
-        });
-
-        signUpButton.addActionListener(event -> {
-            activeAuthInterface(false);
-            new Thread(() -> {
-                Queue<String> input = new ArrayDeque<>();
-                input.add(usernameField.getText());
-                String password = new String(passwordField.getPassword());
-                input.add(password);
-                input.add(password);
-                cm.setInputValues(input);
-                CommandResponse response = cm.runCommand("/sign_up");
-                buttonCallback(response);
-                activeAuthInterface(true);
-            }).start();
-        });
-    }
-
-    private void layoutFrame() {
         setLayout(new GridBagLayout());
         GridBagConstraints c = new GridBagConstraints();
         c.insets = new Insets(5, 2, 5, 2);
@@ -166,5 +62,110 @@ public class AuthFrame extends AbstractFrame {
         c.anchor = GridBagConstraints.CENTER;
         c.fill = GridBagConstraints.BOTH;
         add(authErrorLabel, c);
+
+
+        // Main Layout
+        setTitle(bundle.getString("titleAuth"));
+        setSize(360, 240);
+        setResizable(false);
+        setLocationRelativeTo(null);
+        setVisible(true);
+        setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+    }
+
+    public AuthFrame(CommandManager cm) {
+        super(cm);
+        makeLayout();
+        addListeners();
+    }
+
+    protected void updateLabels() {
+        setTitle(bundle.getString("titleAuth"));
+
+        language.setText(bundle.getString("language"));
+        usernameLabel.setText(bundle.getString("username"));
+        passwordLabel.setText(bundle.getString("password"));
+        setAuthErrorLabel(authErrorLabelKey);
+
+        logInButton.setText(bundle.getString("logInButton"));
+        signUpButton.setText(bundle.getString("signUpButton"));
+    }
+
+    private void setAuthErrorLabel(String key) {
+        if (key == null) {
+            authErrorLabelKey = null;
+            authErrorLabel.setVisible(false);
+        } else {
+            authErrorLabelKey = key;
+            String newLabel = bundle.getString(authErrorLabelKey);
+            authErrorLabel.setText(newLabel.isEmpty() ? key : newLabel);
+            authErrorLabel.setVisible(true);
+        }
+    }
+
+    private void initElements() {
+        initMenuItems();
+
+        usernameLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        passwordLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        authErrorLabel.setForeground(Color.RED);
+        usernameField.setPreferredSize(new Dimension(130, 20));
+        passwordField.setPreferredSize(new Dimension(130, 20));
+        authErrorLabel.setVisible(false);
+    }
+
+    private void activeAuthInterface(boolean active) {
+        usernameField.setEditable(active);
+        passwordField.setEditable(active);
+        logInButton.setEnabled(active);
+        signUpButton.setEnabled(active);
+    }
+
+    private void buttonCallback(CommandResponse response) {
+        switch (response.getExitCode()) {
+            case 0:
+                // SUCCESS -> close AUTH FRAME, open MAIN FRAME
+                dispose();
+                new MainFrame(usernameField.getText(), cm);
+                break;
+            case 2:
+                setAuthErrorLabel("noConnection");
+                break;
+            case 12:
+                setAuthErrorLabel("emptyUsername");
+                break;
+            default:
+                setAuthErrorLabel(response.getMessage());
+        }
+    }
+
+    private void addListeners() {
+        logInButton.addActionListener(event -> {
+            activeAuthInterface(false);
+            new Thread(() -> {
+                Queue<String> input = new ArrayDeque<>();
+                input.add(usernameField.getText());
+                input.add(new String(passwordField.getPassword()));
+                cm.setInputValues(input);
+                CommandResponse response = cm.runCommand("/sign_in");
+                buttonCallback(response);
+                activeAuthInterface(true);
+            }).start();
+        });
+
+        signUpButton.addActionListener(event -> {
+            activeAuthInterface(false);
+            new Thread(() -> {
+                Queue<String> input = new ArrayDeque<>();
+                input.add(usernameField.getText());
+                String password = new String(passwordField.getPassword());
+                input.add(password);
+                input.add(password);
+                cm.setInputValues(input);
+                CommandResponse response = cm.runCommand("/sign_up");
+                buttonCallback(response);
+                activeAuthInterface(true);
+            }).start();
+        });
     }
 }
