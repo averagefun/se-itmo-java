@@ -221,21 +221,21 @@ public class CommandManager {
                 }
             } else {
                 return mc.updateMovie((Movie) argObject, username) ?
-                        new CommandResponse("Successfully updated element!") :
-                        new CommandResponse(10, "Error occurred while updating movie.");
+                        new CommandResponse("successfullyUpd") :
+                        new CommandResponse(10, "errorUpd");
             }
         });
 
         putCommand("remove_by_id", true, (username, count, argObject) -> {
             int id = (int) argObject;
             return mc.removeMovieById(id, username) ?
-                    new CommandResponse("Movie successfully deleted!") :
-                    new CommandResponse("Movie with current id doesn't exists in your collection.");
+                    new CommandResponse("successfullyRem") :
+                    new CommandResponse("errorRem");
         });
 
         putCommand("clear", true, (username, count, argObject) -> mc.clear(username) ?
-                new CommandResponse("Collection cleared successfully!") :
-                new CommandResponse(10, "Error occurred while cleaning collection: collection did not clean."));
+                new CommandResponse("successfullyClean") :
+                new CommandResponse(10, "errorClean"));
 
         putCommand("add_if_min", true, (username, count, argObject) -> {
             Movie movie = (Movie) argObject;

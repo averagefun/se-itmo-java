@@ -7,14 +7,21 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
 import javax.swing.table.TableRowSorter;
+import java.awt.*;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.List;
 
-public class TablePanel extends JPanel implements Refreshable {
+public class TablePanel extends JPanel implements Refreshable, Clearable {
     protected JTable table;
     protected DefaultTableModel tableModel;
-    protected boolean isRowSelected;
+    private List<Movie> cachedCollection;
+
+    private void initElements() {
+        Font tableFont = new Font("Arial", Font.PLAIN, 14);
+        table.setFont(tableFont);
+        table.setRowHeight(20);
+    }
 
     private void makeLayout() {
         String[] columns = {
@@ -33,15 +40,19 @@ public class TablePanel extends JPanel implements Refreshable {
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
         for (int i = 0; i < table.getColumnCount(); i++) {
-            table.getColumnModel().getColumn(0).setPreferredWidth(120);
+            table.getColumnModel().getColumn(i).setMinWidth(100);
+            table.getColumnModel().getColumn(i).setPreferredWidth(127);
+            table.getColumnModel().getColumn(i).setMaxWidth(150);
         }
 
+        initElements();
         addSorter();
     }
 
     private void addSorter() {
         TableRowSorter<TableModel> sorter = new TableRowSorter<>(table.getModel());
 
+        Comparator<String> stringComparator = Comparator.comparing(value -> value);
         Comparator<Integer> integerComparator = Comparator.comparingInt(value -> value);
         Comparator<Long> longComparator = Comparator.comparingLong(value -> value);
         Comparator<Float> doubleComparator = Comparator.comparingDouble(value -> (double) value);
@@ -54,17 +65,18 @@ public class TablePanel extends JPanel implements Refreshable {
                 });
 
         sorter.setComparator(table.getColumnModel().getColumnIndex("Id"), integerComparator);
-        sorter.setComparator(table.getColumnModel().getColumnIndex("X"), doubleComparator);
-        sorter.setComparator(table.getColumnModel().getColumnIndex("Y"), longComparator);
+        sorter.setComparator(table.getColumnModel().getColumnIndex("Author"), stringComparator);
+        sorter.setComparator(table.getColumnModel().getColumnIndex("Name"), stringComparator);
+        sorter.setComparator(table.getColumnModel().getColumnIndex("Creation Date"), localDateComparator);
         sorter.setComparator(table.getColumnModel().getColumnIndex("Genre"), enumComparator);
         sorter.setComparator(table.getColumnModel().getColumnIndex("Rating"), enumComparator);
-        sorter.setComparator(table.getColumnModel().getColumnIndex("Creation Date"), localDateComparator);
+        sorter.setComparator(table.getColumnModel().getColumnIndex("Oscars"), integerComparator);
+        sorter.setComparator(table.getColumnModel().getColumnIndex("X"), doubleComparator);
+        sorter.setComparator(table.getColumnModel().getColumnIndex("Y"), longComparator);
 
         table.setRowSorter(sorter);
 
-        List<RowSorter.SortKey> sortKeys = new ArrayList<>(25);
-        sortKeys.add(new RowSorter.SortKey(1, SortOrder.ASCENDING));
-        sorter.setSortKeys(sortKeys);
+        sorter.addRowSorterListener(event -> clearSelection());
     }
 
     public TablePanel() {
@@ -79,21 +91,30 @@ public class TablePanel extends JPanel implements Refreshable {
     }
 
     protected Map<String, Object> getTableRow(int index) {
+        int newIndex = table.getRowSorter().convertRowIndexToModel(index);
         int columnCount = table.getModel().getColumnCount();
         Map<String, Object> rowStringValues = new HashMap<>(columnCount);
         for (int i=0; i < columnCount; i++) {
-            rowStringValues.put(table.getColumnName(i), table.getModel().getValueAt(index, i));
+
+            rowStringValues.put(table.getColumnName(i), table.getModel().getValueAt(newIndex, i));
         }
         return rowStringValues;
     }
 
     public void refresh(PriorityQueue<Movie> pq) {
-        table.clearSelection();
+        if ((new ArrayList<>(pq)).equals(cachedCollection)) {
+            System.out.println("WHY");
+            return;
+        }
+
+        cachedCollection = new ArrayList<>(pq);
         tableModel.setRowCount(0);
         while (!pq.isEmpty())
             addRowToTable(pq.poll());
-        table.repaint();
-        table.revalidate();
-        isRowSelected = false;
+        tableModel.fireTableDataChanged();
+    }
+
+    public void clearSelection() {
+        table.clearSelection();
     }
 }

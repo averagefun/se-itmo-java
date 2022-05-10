@@ -11,6 +11,8 @@ import network.CommandResponse;
 import javax.swing.*;
 
 import java.awt.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.util.ArrayDeque;
 import java.util.Map;
 import java.util.Objects;
@@ -20,7 +22,7 @@ import java.util.function.Supplier;
 import static gui.AbstractFrame.bundle;
 
 public class SidePanel extends JPanel {
-    private final Refreshable toRefresh;
+    private final Clearable toClear;
     private final String username;
     private final CommandManager cm;
 
@@ -35,7 +37,7 @@ public class SidePanel extends JPanel {
     private final JLabel ratingLabel = new JLabel(bundle.getString("rating") + ":");
     private final JLabel xLabel = new JLabel(bundle.getString("x") + ":");
     private final JLabel yLabel = new JLabel(bundle.getString("y") + ":");
-    private final JPanel updateButtonPanel = new JPanel();
+    private final JPanel updateRemoveButtonPanel = new JPanel();
     private final JLabel printLabel = new JLabel();
 
     // fields
@@ -53,11 +55,12 @@ public class SidePanel extends JPanel {
     private final JButton addButton = new JButton(bundle.getString("addButton"));
     private final JButton toAddButton = new JButton(bundle.getString("toAddButton"));
     private final JButton updateButton = new JButton(bundle.getString("updateButton"));
+    private final JButton removeButton = new JButton(bundle.getString("removeButton"));
 
-    public SidePanel(String username, CommandManager cm, Refreshable toRefresh) {
+    public SidePanel(String username, CommandManager cm, Clearable toClear) {
         this.username = username;
         this.cm = cm;
-        this.toRefresh = toRefresh;
+        this.toClear = toClear;
         makeLayout();
         addListeners();
         setAddMode();
@@ -91,9 +94,7 @@ public class SidePanel extends JPanel {
         statusLabel.setFont(fontTitle);
 
         Font buttonFont = new Font("Arial", Font.BOLD, 15);
-        addButton.setFont(buttonFont);
-        toAddButton.setFont(buttonFont);
-        updateButton.setFont(buttonFont);
+        MyStyle.setMultiplyFont(buttonFont, addButton, toAddButton, updateButton, removeButton);
 
         // font for print label
         Font printFont = new Font("Arial", Font.BOLD, 16);
@@ -129,13 +130,16 @@ public class SidePanel extends JPanel {
 
         addButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        updateButtonPanel.setLayout(new BoxLayout(updateButtonPanel, BoxLayout.X_AXIS));
-        updateButtonPanel.add(updateButton);
-        updateButtonPanel.add(MyLayout.hspace(20));
-        updateButtonPanel.add(toAddButton);
+        updateRemoveButtonPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        updateRemoveButtonPanel.setLayout(new BoxLayout(updateRemoveButtonPanel, BoxLayout.X_AXIS));
+        updateRemoveButtonPanel.add(updateButton);
+        updateRemoveButtonPanel.add(MyLayout.hspace(20));
+        updateRemoveButtonPanel.add(removeButton);
+
+        toAddButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JSeparator separator = new JSeparator(SwingConstants.HORIZONTAL);
-        separator.setPreferredSize(new Dimension(Integer.MAX_VALUE, 5));
+        separator.setPreferredSize(new Dimension(Integer.MAX_VALUE, 7));
         separator.setMaximumSize(new Dimension(Integer.MAX_VALUE, 7));
         separator.setForeground(Color.BLACK);
 
@@ -167,14 +171,16 @@ public class SidePanel extends JPanel {
         add(yPanel);
         add(MyLayout.vspace(10));
         add(addButton);
-        add(updateButtonPanel);
+        add(updateRemoveButtonPanel);
+        add(MyLayout.vspace(10));
+        add(toAddButton);
         add(MyLayout.vspace(12));
         add(separator);
         add(MyLayout.vspace(15));
         add(printLabel);
     }
 
-    private void updateServerCollectionByFieldsValues(Supplier<CommandResponse> supplier) {
+    private CommandResponse updateServerCollectionByFieldsValues(Supplier<CommandResponse> supplier) {
         Queue<String> input = new ArrayDeque<>();
         input.add(nameField.getText());
         input.add(xField.getText());
@@ -192,9 +198,7 @@ public class SidePanel extends JPanel {
         cm.setInputValues(input);
         CommandResponse cRes = supplier.get();
         if (cRes.getExitCode() == 0) {
-            toRefresh.refresh(cm.getServerCollection());
             printToLabel(cRes.getMessage(), true);
-            clearFields();
         } else {
             String message = cRes.getMessage();
             if (message.contains("::")) {
@@ -205,6 +209,7 @@ public class SidePanel extends JPanel {
             }
             printToLabel(message, false);
         }
+        return cRes;
     }
 
     protected void clearPrintLabel() {
@@ -226,7 +231,10 @@ public class SidePanel extends JPanel {
     private void addListeners() {
         addButton.addActionListener(event -> new Thread(() -> {
             addButton.setEnabled(false);
-            updateServerCollectionByFieldsValues(() -> cm.runCommand("add"));
+            CommandResponse cRes = updateServerCollectionByFieldsValues(() -> cm.runCommand("add"));
+            if (cRes.getExitCode() == 0) {
+                clearFields();
+            }
             addButton.setEnabled(true);
         }).start());
 
@@ -237,6 +245,39 @@ public class SidePanel extends JPanel {
             updateServerCollectionByFieldsValues(() -> cm.runCommand("update", idField.getText()));
             updateButton.setEnabled(true);
         }).start());
+
+        removeButton.addActionListener(event -> new Thread(() -> {
+            CommandResponse cRes = cm.runCommand("remove_by_id", idField.getText());
+            printToLabel(cRes.getMessage(), cRes.getExitCode() == 0);
+        }).start());
+
+        xField.addKeyListener(new KeyAdapter() {
+            public void keyTyped(KeyEvent e) {
+                char c = e.getKeyChar();
+                if (!
+                        ((c >= '0' && c <= '9') ||
+                        (c == '-' && !xField.getText().contains("-")) ||
+                        (c == '.' && !xField.getText().isEmpty() && !xField.getText().contains(".")) ||
+                        (c == KeyEvent.VK_BACK_SPACE))
+                ){
+                    e.consume();  // if it's not a digit or '-' or dot, ignore the event
+                }
+            }
+        });
+
+        // integer value validator
+        yField.addKeyListener(new KeyAdapter() {
+            public void keyTyped(KeyEvent e) {
+                char c = e.getKeyChar();
+                if (!
+                        ((c >= '0' && c <= '9') ||
+                        (c == '-' && !yField.getText().contains("-")) ||
+                        (c == KeyEvent.VK_BACK_SPACE))
+                ){
+                    e.consume();  // if it's not a digit or '-', ignore the event
+                }
+            }
+        });
     }
 
     protected void setFields(Map<String, Object> rowValues) {
@@ -257,15 +298,15 @@ public class SidePanel extends JPanel {
         xField.setText(rowValues.get("X").toString());
         yField.setText(rowValues.get("Y").toString());
 
-        updateButtonPanel.setVisible(true);
+        updateRemoveButtonPanel.setVisible(true);
         toAddButton.setVisible(true);
         if (author.equals(username)) {
             setEditableFields(true);
             statusLabel.setText(bundle.getString("statusUpdate"));
-            updateButton.setVisible(true);
+            updateRemoveButtonPanel.setVisible(true);
         } else {
             statusLabel.setText(bundle.getString("statusView"));
-            updateButton.setVisible(false);
+            updateRemoveButtonPanel.setVisible(false);
         }
     }
 
@@ -299,12 +340,11 @@ public class SidePanel extends JPanel {
     }
 
     private void setAddMode() {
-        // todo row selection clear
-
+        toClear.clearSelection();
         clearFields();
         statusLabel.setText(bundle.getString("statusAdd"));
         toAddButton.setVisible(false);
-        updateButtonPanel.setVisible(false);
+        updateRemoveButtonPanel.setVisible(false);
         addButton.setVisible(true);
         setEditableFields(true);
         authorField.setText(username);

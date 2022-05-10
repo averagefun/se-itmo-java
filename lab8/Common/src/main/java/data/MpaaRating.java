@@ -2,6 +2,9 @@ package data;
 
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public enum MpaaRating {
     G,
     PG,
@@ -15,5 +18,14 @@ public enum MpaaRating {
                 return mr;
         }
         return null;
+    }
+
+    public static String[] getStringValues(String defaultValue) {
+        List<String> values = new ArrayList<>(MpaaRating.values().length + 1);
+        if (defaultValue != null) values.add(defaultValue);
+        for (MpaaRating mpaaRating: MpaaRating.values()) {
+            values.add(mpaaRating.toString());
+        }
+        return values.toArray(new String[0]);
     }
 }

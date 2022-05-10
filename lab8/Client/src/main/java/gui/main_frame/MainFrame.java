@@ -48,27 +48,6 @@ public class MainFrame extends AbstractFrame {
         JLabel graphics = new JLabel(bundle.getString("graphics"));
         tabbedPane.addTab(graphics.getText(), graphicsPanel);
         tableGraphicsPanelsWrapper.add(tabbedPane, BorderLayout.CENTER);
-
-//        tabbedPane.addChangeListener(e ->
-//                new Thread(() -> {
-//                    JTabbedPane sourceTabbedPane = (JTabbedPane) e.getSource();
-//                    int index = sourceTabbedPane.getSelectedIndex();
-//                    //cancel();
-//                    if (index == 0) {
-//                        nameFilter.setEnabled(true);
-//                        creationDateFilter.setEnabled(true);
-//                        genreFilter.setEnabled(true);
-//                        ratingFilter.setEnabled(true);
-//                    } else {
-//                        isRowSelected = true;
-//                        table.getSelectionModel().clearSelection();
-//                        isRowSelected = false;
-//                        nameFilter.setEnabled(false);
-//                        creationDateFilter.setEnabled(false);
-//                        genreFilter.setEnabled(false);
-//                        ratingFilter.setEnabled(false);
-//                    }
-//                }).start());
     }
 
     private void makeLayout() {
@@ -102,7 +81,9 @@ public class MainFrame extends AbstractFrame {
         add(tableGraphicsFilterPanelsWrapper, BorderLayout.CENTER);
         add(sidePanelWrapper, BorderLayout.EAST);
         setTitle(bundle.getString("titleMain"));
+        setMinimumSize(new Dimension(1252,650));
         setSize(1500, 800);
+        setMaximumSize(new Dimension(1702, 900));
         setLocationRelativeTo(null);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setVisible(true);
@@ -113,9 +94,9 @@ public class MainFrame extends AbstractFrame {
         this.username = username;
 
         this.tablePanel = new TablePanel();
+        this.filterPanel = new FilterPanel(cm::getServerCollection, tablePanel);
         tablePanel.refresh(cm.getServerCollection());
         this.sidePanel = new SidePanel(username, cm, tablePanel);
-        this.filterPanel = new FilterPanel(cm, tablePanel);
 
         makeLayout();
         addListeners();
@@ -135,44 +116,13 @@ public class MainFrame extends AbstractFrame {
         }).start());
 
         tablePanel.table.getSelectionModel().addListSelectionListener(event -> {
-            if (!tablePanel.isRowSelected) {
+            if (!tablePanel.table.getSelectionModel().isSelectionEmpty()) {
                 new Thread(() -> {
                     int index = tablePanel.table.getSelectedRow();
                     sidePanel.setFields(tablePanel.getTableRow(index));
-                    sidePanel.
+                    sidePanel.clearPrintLabel();
                 }).start();
             }
         });
-
-//        // double value validator
-//        xField.addKeyListener(new KeyAdapter() {
-//            public void keyTyped(KeyEvent e) {
-//                char c = e.getKeyChar();
-//                if (!
-//                        ((c >= '1' && c <= '9') ||
-//                        (c == '0' && !xField.getText().isEmpty()) ||
-//                        (c == '-' && !xField.getText().contains("-")) ||
-//                        (c == '.' && !xField.getText().isEmpty() && !xField.getText().contains(".")) ||
-//                        (c == KeyEvent.VK_BACK_SPACE))
-//                ){
-//                    e.consume();  // if it's not a digit or dot, ignore the event
-//                }
-//            }
-//        });
-//
-//        // integer value validator
-//        yField.addKeyListener(new KeyAdapter() {
-//            public void keyTyped(KeyEvent e) {
-//                char c = e.getKeyChar();
-//                if (!
-//                        ((c >= '1' && c <= '9') ||
-//                        (c == '0' && !yField.getText().isEmpty()) ||
-//                        (c == '-' && !yField.getText().contains("-")) ||
-//                        (c == KeyEvent.VK_BACK_SPACE))
-//                ){
-//                    e.consume();  // if it's not a digit, ignore the event
-//                }
-//            }
-//        });
     }
 }

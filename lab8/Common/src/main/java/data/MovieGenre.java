@@ -2,6 +2,9 @@ package data;
 
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public enum MovieGenre {
     ADVENTURE,
     THRILLER,
@@ -19,5 +22,14 @@ public enum MovieGenre {
     @Override
     public String toString() {
         return super.toString().toLowerCase();
+    }
+
+    public static String[] getStringValues(String defaultValue) {
+        List<String> values = new ArrayList<>(MovieGenre.values().length + 1);
+        if (defaultValue != null) values.add(defaultValue);
+        for (MovieGenre movieGenre: MovieGenre.values()) {
+            values.add(movieGenre.toString());
+        }
+        return values.toArray(new String[0]);
     }
 }

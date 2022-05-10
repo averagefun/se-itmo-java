@@ -6,11 +6,14 @@ import org.jetbrains.annotations.Nullable;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.Locale;
+import java.util.Objects;
 
 /**
  * Class represent movie (film) that storage in MovieCollection.
  */
 public class Movie implements Comparable<Movie>, Serializable {
+    private static final long serialVersionUID = -2139197018209591977L;
+
     private int id;
     private String username;
     private String name;
@@ -110,5 +113,18 @@ public class Movie implements Comparable<Movie>, Serializable {
     @Override
     public String toString() {
         return String.format(Locale.US, "%2d %s", id, name);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Movie movie = (Movie) o;
+        return id == movie.id && oscarsCount == movie.oscarsCount && Objects.equals(username, movie.username) && name.equals(movie.name) && coordinates.equals(movie.coordinates) && creationDate.equals(movie.creationDate) && movieGenre == movie.movieGenre && mpaaRating == movie.mpaaRating && director.equals(movie.director);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, coordinates, creationDate, oscarsCount, movieGenre, director);
     }
 }
