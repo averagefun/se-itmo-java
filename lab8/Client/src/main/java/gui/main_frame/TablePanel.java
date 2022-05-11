@@ -1,6 +1,7 @@
 package gui.main_frame;
 
 import data.Movie;
+import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -10,12 +11,10 @@ import javax.swing.table.TableRowSorter;
 import java.awt.*;
 import java.time.LocalDate;
 import java.util.*;
-import java.util.List;
 
-public class TablePanel extends JPanel implements Refreshable, Clearable {
+public class TablePanel extends JPanel {
     protected JTable table;
     protected DefaultTableModel tableModel;
-    private List<Movie> cachedCollection;
 
     private void initElements() {
         Font tableFont = new Font("Arial", Font.PLAIN, 14);
@@ -28,7 +27,7 @@ public class TablePanel extends JPanel implements Refreshable, Clearable {
                 "Id", "Author", "Name", "Creation Date", "Genre", "Rating", "Oscars", "X", "Y"
         };
 
-        tableModel = new MyDefaultTableModel();
+        tableModel = new MyTableModel();
         tableModel.setColumnIdentifiers(columns);
         table = new JTable(tableModel);
         table.setAutoCreateRowSorter(true);
@@ -101,13 +100,7 @@ public class TablePanel extends JPanel implements Refreshable, Clearable {
         return rowStringValues;
     }
 
-    public void refresh(PriorityQueue<Movie> pq) {
-        if ((new ArrayList<>(pq)).equals(cachedCollection)) {
-            System.out.println("WHY");
-            return;
-        }
-
-        cachedCollection = new ArrayList<>(pq);
+    public void refresh(@NotNull PriorityQueue<Movie> pq) {
         tableModel.setRowCount(0);
         while (!pq.isEmpty())
             addRowToTable(pq.poll());

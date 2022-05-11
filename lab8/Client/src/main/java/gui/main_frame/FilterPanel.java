@@ -1,24 +1,27 @@
 package gui.main_frame;
 
+import commands.CommandManager;
 import data.Movie;
 import data.MovieGenre;
 import data.MpaaRating;
 import gui.addition.FilterListener;
 import localization.MyBundle;
+import network.CommandResponse;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.util.Objects;
-import java.util.PriorityQueue;
-import java.util.function.Supplier;
+import java.util.*;
 import java.util.stream.Collectors;
 
-public class FilterPanel extends JPanel implements Refreshable {
+public class FilterPanel extends JPanel {
     private final MyBundle bundle = MyBundle.getBundle("gui");
-    private final Supplier<PriorityQueue<Movie>> collectionSupplier;
-    private final Refreshable toRefresh;
+
+    private final CommandManager cm;
+    private final Mediator mediator;
+    protected PriorityQueue<Movie> filteredQueue = new PriorityQueue<>();
+    private PriorityQueue<Movie> cachedCollection = new PriorityQueue<>();
 
     private final JTextField idFilter = new JTextField();
     private final JTextField authorFilter = new JTextField();
@@ -32,13 +35,14 @@ public class FilterPanel extends JPanel implements Refreshable {
             new String[]{bundle.getString("any"), "0","1","2","3","4","5","6","7","8","9","10","11"});
 
     private final JButton dropFiltersButton = new JButton(bundle.getString("dropFiltersButton"));
+    protected Thread refresher;
 
     private void addTextFilter(JTextField filter) {
         filter.setMinimumSize(new Dimension(100, 30));
         filter.setPreferredSize(new Dimension(127, 30));
         filter.setMaximumSize(new Dimension(150, 50));
         add(filter);
-        filter.getDocument().addDocumentListener(new FilterListener(this::refreshFromServer));
+        filter.getDocument().addDocumentListener(new FilterListener(this::applyFilters));
     }
 
     private <T> void addComboFilter(JComboBox<T> filter) {
@@ -46,7 +50,7 @@ public class FilterPanel extends JPanel implements Refreshable {
         filter.setPreferredSize(new Dimension(127, 30));
         filter.setMaximumSize(new Dimension(150, 50));
         add(filter);
-        filter.addActionListener(event -> this.refreshFromServer());
+        filter.addActionListener(event -> this.applyFilters());
     }
 
     private void makeLayout() {
@@ -65,9 +69,9 @@ public class FilterPanel extends JPanel implements Refreshable {
         add(dropFiltersButton);
     }
 
-    public FilterPanel(Supplier<PriorityQueue<Movie>> collectionSupplier, Refreshable toRefresh) {
-        this.collectionSupplier = collectionSupplier;
-        this.toRefresh = toRefresh;
+    public FilterPanel(Mediator mediator) {
+        this.cm = mediator.getCommandManager();
+        this.mediator = mediator;
         makeLayout();
         addListeners();
         createRefresher();
@@ -105,39 +109,51 @@ public class FilterPanel extends JPanel implements Refreshable {
     }
 
     public void createRefresher() {
-        Thread refresher = new Thread(() -> {
+        refresher = new Thread(() -> {
             while(true) {
-                try {
+                CommandResponse cRes = cm.runCommand("$get", "force");
+                if (cRes.getExitCode() == 2) {
+                    mediator.notify(this, "noConnection");
+                } else if (cRes.getExitCode() == 0) {
+                    @SuppressWarnings("unchecked")
+                    PriorityQueue<Movie> pq = (PriorityQueue<Movie>) cRes.getObject();
+                    mediator.notify(this, "gotCollection");
+                    if (pq == null) {
+                        cachedCollection = new PriorityQueue<>();
+                        applyFilters();
+                    } else if (!new ArrayList<>(pq).equals(new ArrayList<>(cachedCollection))) {
+                        cachedCollection = pq;
+                        applyFilters();
+                    }
+                } try {
                     //noinspection BusyWait
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     break;
                 }
-                System.out.println("updating");
-                refreshFromServer();
             }
         });
         refresher.setDaemon(true);
         refresher.start();
     }
 
-    private void refreshFromServer() {
-        refresh(collectionSupplier.get());
-    }
-
-    public void refresh(PriorityQueue<Movie> pq) {
-        PriorityQueue<Movie> filteredQueue = pq.stream()
-                .filter(movie -> idFilter.getText().isEmpty() || Integer.toString(movie.getId()).equals(idFilter.getText()))
-                .filter(movie -> authorFilter.getText().isEmpty() || movie.getUsername().startsWith(authorFilter.getText()))
-                .filter(movie -> nameFilter.getText().isEmpty() || movie.getName().startsWith(nameFilter.getText()))
-                .filter(movie -> creationDateFilter.getText().isEmpty() || movie.getCreationDate().toString().equals(creationDateFilter.getText()))
-                .filter(movie -> genreFilter.getSelectedItem() == bundle.getString("any") ||
-                        movie.getMovieGenre().toString().equalsIgnoreCase(Objects.requireNonNull(genreFilter.getSelectedItem()).toString()))
-                .filter(movie -> ratingFilter.getSelectedItem() == bundle.getString("any") ||
-                        movie.getMpaaRating().toString().equalsIgnoreCase(Objects.requireNonNull(ratingFilter.getSelectedItem()).toString()))
-                .filter(movie -> oscarsFilter.getSelectedItem() ==  bundle.getString("any") ||
-                        Integer.toString(movie.getOscarsCount()).equalsIgnoreCase(Objects.requireNonNull(oscarsFilter.getSelectedItem()).toString()))
-                .collect(Collectors.toCollection(PriorityQueue<Movie>::new));
-        toRefresh.refresh(filteredQueue);
+    public void applyFilters() {
+        if (cachedCollection == null || cachedCollection.isEmpty()) {
+            filteredQueue = new PriorityQueue<>();
+        } else {
+            filteredQueue = cachedCollection.stream()
+                    .filter(movie -> idFilter.getText().isEmpty() || Integer.toString(movie.getId()).equals(idFilter.getText()))
+                    .filter(movie -> authorFilter.getText().isEmpty() || movie.getUsername().toLowerCase().startsWith(authorFilter.getText().toLowerCase()))
+                    .filter(movie -> nameFilter.getText().isEmpty() || movie.getName().toLowerCase().startsWith(nameFilter.getText().toLowerCase()))
+                    .filter(movie -> creationDateFilter.getText().isEmpty() || movie.getCreationDate().toString().equals(creationDateFilter.getText()))
+                    .filter(movie -> genreFilter.getSelectedItem() == bundle.getString("any") ||
+                            movie.getMovieGenre().toString().equalsIgnoreCase(Objects.requireNonNull(genreFilter.getSelectedItem()).toString()))
+                    .filter(movie -> ratingFilter.getSelectedItem() == bundle.getString("any") ||
+                            movie.getMpaaRating().toString().equalsIgnoreCase(Objects.requireNonNull(ratingFilter.getSelectedItem()).toString()))
+                    .filter(movie -> oscarsFilter.getSelectedItem() == bundle.getString("any") ||
+                            Integer.toString(movie.getOscarsCount()).equalsIgnoreCase(Objects.requireNonNull(oscarsFilter.getSelectedItem()).toString()))
+                    .collect(Collectors.toCollection(PriorityQueue<Movie>::new));
+        }
+        mediator.notify(this, "filtersApplied");
     }
 }

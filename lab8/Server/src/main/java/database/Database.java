@@ -99,10 +99,6 @@ public class Database {
         return stmt.executeQuery();
     }
 
-    public void closeQuery() throws SQLException {
-        stmt.close();
-    }
-
     public void closeConnection() throws SQLException {
         connection.close();
     }

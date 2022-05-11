@@ -3,15 +3,12 @@ package network;
 import java.io.Serializable;
 
 public class CommandRequest implements Serializable {
+    private static final long serialVersionUID = 3707777629449859022L;
     private final String username;
     private final String password;
     private final String name;
     private final int count;
     private final Object arg;
-
-    public CommandRequest(String name, int count, String username, String password) {
-        this(name, count, username, password, null);
-    }
 
     public <T extends Serializable> CommandRequest(String name, int count, T arg, String username, String password) {
         this.name = name;

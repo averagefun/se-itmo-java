@@ -6,6 +6,7 @@ import data.MpaaRating;
 import gui.addition.MyLayout;
 import gui.addition.MyStyle;
 import gui.addition.IndentedRenderer;
+import localization.MyBundle;
 import network.CommandResponse;
 
 import javax.swing.*;
@@ -19,12 +20,12 @@ import java.util.Objects;
 import java.util.Queue;
 import java.util.function.Supplier;
 
-import static gui.AbstractFrame.bundle;
-
 public class SidePanel extends JPanel {
-    private final Clearable toClear;
+    private final MyBundle bundle = MyBundle.getBundle("gui");
     private final String username;
+
     private final CommandManager cm;
+    private final Mediator mediator;
 
     // labels
     private final JLabel statusLabel = new JLabel(bundle.getString("statusAdd") + ":");
@@ -57,10 +58,10 @@ public class SidePanel extends JPanel {
     private final JButton updateButton = new JButton(bundle.getString("updateButton"));
     private final JButton removeButton = new JButton(bundle.getString("removeButton"));
 
-    public SidePanel(String username, CommandManager cm, Clearable toClear) {
+    public SidePanel(String username, Mediator mediator) {
         this.username = username;
-        this.cm = cm;
-        this.toClear = toClear;
+        this.cm = mediator.getCommandManager();
+        this.mediator = mediator;
         makeLayout();
         addListeners();
         setAddMode();
@@ -216,7 +217,7 @@ public class SidePanel extends JPanel {
         printLabel.setText("");
     }
 
-    private void printToLabel(String message, boolean isSuccess) {
+    protected void printToLabel(String message, boolean isSuccess) {
         if (isSuccess) {
             printLabel.setForeground(Color.GREEN);
         } else {
@@ -228,27 +229,39 @@ public class SidePanel extends JPanel {
         printLabel.setText(String.format(htmlWrapLines, 250, bundleMessage));
     }
 
+    protected void setEnabledButtons(boolean b) {
+        addButton.setEnabled(b);
+        updateButton.setEnabled(b);
+        toAddButton.setEnabled(b);
+        removeButton.setEnabled(b);
+    }
+
     private void addListeners() {
         addButton.addActionListener(event -> new Thread(() -> {
-            addButton.setEnabled(false);
+            mediator.notify(this, "disableButtons");
             CommandResponse cRes = updateServerCollectionByFieldsValues(() -> cm.runCommand("add"));
             if (cRes.getExitCode() == 0) {
                 clearFields();
             }
-            addButton.setEnabled(true);
+            mediator.notify(this, "enableButtons");
         }).start());
 
         toAddButton.addActionListener(event -> new Thread(this::setAddMode).start());
 
         updateButton.addActionListener(event -> new Thread(() -> {
-            updateButton.setEnabled(false);
+            mediator.notify(this, "disableButtons");
             updateServerCollectionByFieldsValues(() -> cm.runCommand("update", idField.getText()));
-            updateButton.setEnabled(true);
+            mediator.notify(this, "enableButtons");
         }).start());
 
         removeButton.addActionListener(event -> new Thread(() -> {
+            mediator.notify(this, "disableButtons");
             CommandResponse cRes = cm.runCommand("remove_by_id", idField.getText());
             printToLabel(cRes.getMessage(), cRes.getExitCode() == 0);
+            if (cRes.getExitCode() == 0) {
+                setAddMode();
+            }
+            mediator.notify(this, "enableButtons");
         }).start());
 
         xField.addKeyListener(new KeyAdapter() {
@@ -340,7 +353,7 @@ public class SidePanel extends JPanel {
     }
 
     private void setAddMode() {
-        toClear.clearSelection();
+        mediator.notify(this, "clearTableSelection");
         clearFields();
         statusLabel.setText(bundle.getString("statusAdd"));
         toAddButton.setVisible(false);

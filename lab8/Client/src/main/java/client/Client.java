@@ -4,8 +4,6 @@ import commands.CommandManager;
 import console.Console;
 import exceptions.AuthorizationException;
 import gui.AuthFrame;
-import localization.MyBundle;
-import localization.MyLocale;
 import network.CommandResponse;
 import network.Common;
 
@@ -116,10 +114,8 @@ public class Client {
             if (input.length >= 2) {
                 arg = input[1];
             }
-            MyBundle bundle = MyBundle.getBundle("console", MyLocale.ENGLISH);
-            String commandOutput = cm.runCommand(command, arg).getMessage();
-            String bundleOutput = bundle.getString(commandOutput);
-            console.printlnMode(bundleOutput.isEmpty() ? commandOutput : bundleOutput);
+            CommandResponse cRes = cm.runCommand(command, arg);
+            console.printlnMode(cRes.getMessage());
         }
     }
 

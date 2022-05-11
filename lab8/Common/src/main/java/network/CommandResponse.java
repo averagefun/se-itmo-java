@@ -5,6 +5,7 @@ import org.jetbrains.annotations.NotNull;
 import java.io.Serializable;
 
 public class CommandResponse implements Serializable {
+    private static final long serialVersionUID = 5198924033159344900L;
     private int exitCode = 0;
     private String message = "";
     private Object object;

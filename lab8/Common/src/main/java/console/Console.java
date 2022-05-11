@@ -1,6 +1,8 @@
 package console;
 
 import exceptions.CommandInterruptedException;
+import localization.MyBundle;
+import localization.MyLocale;
 
 import java.util.NoSuchElementException;
 import java.util.Scanner;
@@ -11,14 +13,11 @@ import java.util.Scanner;
 public class Console {
     private final Scanner sc;
     private boolean printMode;
+    private final static MyBundle bundle = MyBundle.getBundle("console", MyLocale.ENGLISH);
 
     public Console(Scanner sc, boolean printMode) {
         this.sc = sc;
         this.printMode = printMode;
-    }
-
-    public Scanner getSc() {
-        return sc;
     }
 
     public boolean isPrintMode() {
@@ -30,7 +29,9 @@ public class Console {
     }
 
     public static void print(Object printable){
-        System.out.print(printable);
+        String message = printable.toString();
+        String bundleMessage = bundle.getString(message);
+        System.out.print(bundleMessage.isEmpty() ? message : bundleMessage);
     }
 
     public static void print(Object printable, boolean printMode){
@@ -42,7 +43,9 @@ public class Console {
     }
 
     public static void println(Object printable){
-        System.out.println(printable);
+        String message = printable.toString();
+        String bundleMessage = bundle.getString(message);
+        System.out.println(bundleMessage.isEmpty() ? message : bundleMessage);
     }
 
     public static void println(Object printable, boolean printMode){

@@ -73,7 +73,7 @@ public class CommandManager {
                 ResultSet rs = db.executeQuery("SELECT salt FROM users WHERE username = ?", cReq.getUsername());
                 rs.next();
                 String userSalt = rs.getString("salt");
-                db.closeQuery();
+                rs.close();
 
                 SHA224 sha = new SHA224(db.getDbSalt(), userSalt);
                 rs = db.executeQuery(
@@ -109,10 +109,10 @@ public class CommandManager {
                 ResultSet rs = db.executeQuery("SELECT exists(SELECT 1 FROM users WHERE username = ?)", argObject);
                 rs.next();
                 if (rs.getBoolean(1)) {
-                    db.closeQuery();
+                    rs.close();
                     return new CommandResponse();
                 } else {
-                    db.closeQuery();
+                    rs.close();
                     return new CommandResponse(10, "usernameDoesntExists");
                 }
             } else {
@@ -122,7 +122,7 @@ public class CommandManager {
                     ResultSet rs = db.executeQuery("SELECT salt FROM users WHERE username = ?", currUsername);
                     rs.next();
                     String userSalt = rs.getString(1);
-                    db.closeQuery();
+                    rs.close();
 
                     SHA224 sha = new SHA224(db.getDbSalt(), userSalt);
                     rs = db.executeQuery(
@@ -130,10 +130,10 @@ public class CommandManager {
                             currUsername, sha.getHashString(password));
                     rs.next();
                     if (rs.getBoolean(1)) {
-                        db.closeQuery();
+                        rs.close();
                         return new CommandResponse();
                     } else {
-                        db.closeQuery();
+                        rs.close();
                         return new CommandResponse(10, "wrongPassword");
                     }
             }
@@ -144,10 +144,10 @@ public class CommandManager {
                 ResultSet rs = db.executeQuery("SELECT exists(SELECT 1 FROM users WHERE username = ?)", argObject);
                 rs.next();
                 if (!rs.getBoolean(1)) {
-                    db.closeQuery();
+                    rs.close();
                     return new CommandResponse();
                 } else {
-                    db.closeQuery();
+                    rs.close();
                     return new CommandResponse(10, "usernameAlreadyExists");
                 }
             } else {
@@ -213,7 +213,7 @@ public class CommandManager {
                 ResultSet rs = db.executeQuery("SELECT username FROM movies WHERE id = ?", m.getId());
                 rs.next();
                 String dbUsername = rs.getString(1);
-                db.closeQuery();
+                rs.close();
                 if (!username.equals(dbUsername)) {
                     return new CommandResponse(10,"Permission denied: you have no rights to edit this film.");
                 } else {

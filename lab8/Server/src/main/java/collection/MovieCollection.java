@@ -59,8 +59,15 @@ public class MovieCollection {
         return result;
     }
 
+    private void addMoviesToMemory(List<Movie> movies, boolean clear) {
+        readWriteLock.writeLock().lock();
+        if (clear) pq.clear();
+        pq.addAll(movies);
+        readWriteLock.writeLock().unlock();
+    }
+
     private int initMoviesFromDB() throws SQLException {
-        ResultSet m = db.executeQuery(
+        ResultSet rs = db.executeQuery(
                 "SELECT movies.id AS id, movies.username AS username, " +
                         "movies.name AS name, coordinates.x AS c_x, coordinates.y AS c_y,\n" +
                         "       movies.creation_date AS creation_date, movies.oscars_count AS oscars_count,\n" +
@@ -70,21 +77,24 @@ public class MovieCollection {
                         "JOIN coordinates on movies.coordinates = coordinates.id\n" +
                         "JOIN persons on movies.director = persons.id\n" +
                         "JOIN locations on persons.location = locations.id");
+        List<Movie> moviesList = new ArrayList<>(rs.getFetchSize() + 1);
         int i;
-        for (i = 0; m.next(); i++) {
+        for (i = 0; rs.next(); i++) {
             Movie movie = new Movie(
-                    m.getInt("id"),
-                    m.getString("username"),
-                    m.getString("name"),
-                    new Coordinates(m.getFloat("c_x"), m.getLong("c_y")),
-                    m.getInt("oscars_count"),
-                    MovieGenre.valueOf(m.getString("movie_genre")),
-                    m.getString("mpaa_rating") != null ? MpaaRating.valueOf(m.getString("mpaa_rating")) : null,
-                    new Person(m.getString("p_name"), m.getDouble("p_weight"), Color.valueOf(m.getString("p_color")),
-                            new Location(m.getDouble("l_x"), m.getDouble("l_y"), m.getString("l_name")))
+                    rs.getInt("id"),
+                    rs.getString("username"),
+                    rs.getString("name"),
+                    new Coordinates(rs.getFloat("c_x"), rs.getLong("c_y")),
+                    rs.getInt("oscars_count"),
+                    MovieGenre.valueOf(rs.getString("movie_genre")),
+                    rs.getString("mpaa_rating") != null ? MpaaRating.valueOf(rs.getString("mpaa_rating")) : null,
+                    new Person(rs.getString("p_name"), rs.getDouble("p_weight"), Color.valueOf(rs.getString("p_color")),
+                            new Location(rs.getDouble("l_x"), rs.getDouble("l_y"), rs.getString("l_name")))
                     );
-            addMovieToMemory(movie);
+            moviesList.add(movie);
         }
+        rs.close();
+        addMoviesToMemory(moviesList, true);
         return i;
     }
 
@@ -146,20 +156,20 @@ public class MovieCollection {
                 m.getCoordinates().getX(), m.getCoordinates().getY());
         rs.next();
         int coordinatesId = rs.getInt("id");
-        db.closeQuery();
+        rs.close();
 
         rs = db.executeQuery("INSERT INTO locations (x, y, name) VALUES (?, ?, ?) RETURNING id",
                 m.getDirector().getLocation().getX(), m.getDirector().getLocation().getY(),
                 m.getDirector().getLocation().getName());
         rs.next();
         int locationsId = rs.getInt("id");
-        db.closeQuery();
+        rs.close();
 
         rs = db.executeQuery("INSERT INTO persons (name, weight, hair_color, location) VALUES (?, ?, ?, ?) RETURNING id",
                 m.getDirector().getName(), m.getDirector().getWeight(), m.getDirector().getHairColor(), locationsId);
         rs.next();
         int personsId = rs.getInt("id");
-        db.closeQuery();
+        rs.close();
 
         rs = db.executeQuery("INSERT INTO movies (name, username, coordinates, creation_date, oscars_count, movie_genre, mpaa_rating, director)" +
                         " VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
@@ -181,7 +191,7 @@ public class MovieCollection {
         int coordinatesId = rs.getInt("coordinates");
         int directorId = rs.getInt("director");
         int locationId = rs.getInt("location");
-        db.closeQuery();
+        rs.close();
 
         db.executeUpdate("UPDATE coordinates SET x = ?, y = ? WHERE id = ?",
                 m.getCoordinates().getX(), m.getCoordinates().getY(), coordinatesId);
@@ -208,9 +218,11 @@ public class MovieCollection {
     public boolean removeMovieById(int id, String username) throws SQLException {
         int n = db.executeUpdate("DELETE FROM movies WHERE id = ? AND username = ?", id, username);
         if (n > 0) {
-            pq = getQueueStream()
+            readWriteLock.writeLock().lock();
+            pq = pq.stream()
                     .filter(movie -> movie.getId() != id)
                     .collect(Collectors.toCollection(PriorityQueue<Movie>::new));
+            readWriteLock.writeLock().unlock();
             return true;
         }
         return false;

@@ -120,11 +120,20 @@ public class Movie implements Comparable<Movie>, Serializable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Movie movie = (Movie) o;
-        return id == movie.id && oscarsCount == movie.oscarsCount && Objects.equals(username, movie.username) && name.equals(movie.name) && coordinates.equals(movie.coordinates) && creationDate.equals(movie.creationDate) && movieGenre == movie.movieGenre && mpaaRating == movie.mpaaRating && director.equals(movie.director);
+        return id == movie.id
+                && oscarsCount == movie.oscarsCount
+                && Objects.equals(username, movie.username)
+                && name.equals(movie.name)
+                && coordinates.equals(movie.coordinates)
+                && creationDate.equals(movie.creationDate)
+                && movieGenre == movie.movieGenre
+                && mpaaRating == movie.mpaaRating
+                && director.equals(movie.director);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, coordinates, creationDate, oscarsCount, movieGenre, director);
+        return Objects.hash(id, username, name, coordinates, creationDate,
+                oscarsCount, movieGenre, mpaaRating, director);
     }
 }

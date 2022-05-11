@@ -8,8 +8,9 @@ import gui.addition.MyLayout;
 import javax.swing.*;
 import java.awt.*;
 
-public class MainFrame extends AbstractFrame {
-    private final String username;
+public class MainFrame extends AbstractFrame implements Mediator {
+    // Top Panel
+    private final TopPanel topPanel;
 
     // Side Panel
     private final SidePanel sidePanel;
@@ -26,9 +27,6 @@ public class MainFrame extends AbstractFrame {
     private final FilterPanel filterPanel;
     // TableGraphics Panel & Filter Panel
     private final JPanel tableGraphicsFilterPanelsWrapper = new JPanel();
-
-    // Buttons
-    private final JButton exitButton = new JButton(bundle.getString("exitButton"));
 
     private void initElements() {
         initMenuItems();
@@ -53,18 +51,6 @@ public class MainFrame extends AbstractFrame {
     private void makeLayout() {
         initElements();
 
-        JLabel loginInfo = new JLabel(bundle.getString("user") + ": " + username);
-
-        JPanel userInfo = new JPanel();
-        userInfo.setLayout(new BoxLayout(userInfo, BoxLayout.X_AXIS));
-        exitButton.setAlignmentX(JComponent.RIGHT_ALIGNMENT);
-        loginInfo.setAlignmentX(JComponent.RIGHT_ALIGNMENT);
-        userInfo.add(Box.createHorizontalGlue());
-        userInfo.add(loginInfo);
-        userInfo.add(MyLayout.hspace(8));
-        userInfo.add(exitButton);
-        userInfo.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, Color.BLACK));
-
         tableGraphicsFilterPanelsWrapper.setLayout(new BorderLayout());
         tableGraphicsFilterPanelsWrapper.add(tableGraphicsPanelsWrapper, BorderLayout.CENTER);
         tableGraphicsFilterPanelsWrapper.add(filterPanel, BorderLayout.NORTH);
@@ -77,7 +63,7 @@ public class MainFrame extends AbstractFrame {
 
         // Main Layout
         setLayout(new BorderLayout());
-        add(userInfo, BorderLayout.NORTH);
+        add(topPanel, BorderLayout.NORTH);
         add(tableGraphicsFilterPanelsWrapper, BorderLayout.CENTER);
         add(sidePanelWrapper, BorderLayout.EAST);
         setTitle(bundle.getString("titleMain"));
@@ -91,12 +77,11 @@ public class MainFrame extends AbstractFrame {
 
     public MainFrame(String username, CommandManager cm) {
         super(cm);
-        this.username = username;
 
+        this.topPanel = new TopPanel(username, this);
         this.tablePanel = new TablePanel();
-        this.filterPanel = new FilterPanel(cm::getServerCollection, tablePanel);
-        tablePanel.refresh(cm.getServerCollection());
-        this.sidePanel = new SidePanel(username, cm, tablePanel);
+        this.filterPanel = new FilterPanel(this);
+        this.sidePanel = new SidePanel(username, this);
 
         makeLayout();
         addListeners();
@@ -109,12 +94,6 @@ public class MainFrame extends AbstractFrame {
     }
 
     private void addListeners() {
-        exitButton.addActionListener(event -> new Thread(() -> {
-            cm.runCommand("/sign_out");
-            dispose();
-            new AuthFrame(cm);
-        }).start());
-
         tablePanel.table.getSelectionModel().addListSelectionListener(event -> {
             if (!tablePanel.table.getSelectionModel().isSelectionEmpty()) {
                 new Thread(() -> {
@@ -124,5 +103,50 @@ public class MainFrame extends AbstractFrame {
                 }).start();
             }
         });
+    }
+
+    public CommandManager getCommandManager() {
+        return cm;
+    }
+
+    public void notify(JPanel sender, String event) {
+        if (event.equals("enableButtons")) {
+            try {
+                Thread.sleep(300);
+            } catch (InterruptedException e) {
+                return;
+            }
+            sidePanel.setEnabledButtons(true);
+            topPanel.setEnabledButtons(true);
+        } else if (event.equals("disableButtons")) {
+            sidePanel.setEnabledButtons(false);
+            topPanel.setEnabledButtons(false);
+        } else if (event.equals("signOut")) {
+            filterPanel.refresher.interrupt();
+            dispose();
+            new AuthFrame(cm);
+        } else if (sender == filterPanel) {
+            switch (event) {
+                case "gotCollection":
+                    if (!cm.isConnected) {
+                        cm.isConnected = true;
+                        sidePanel.clearPrintLabel();
+                        setTitle(bundle.getString("titleMain"));
+                    }
+                    break;
+                case "filtersApplied":
+                    tablePanel.refresh(filterPanel.filteredQueue);
+                    break;
+                case "noConnection":
+                    cm.isConnected = false;
+                    setTitle(bundle.getString("titleMain") + " - " + bundle.getString("waitingConnection"));
+                    break;
+            }
+        } else if (sender == topPanel && event.equals("printToLabel")) {
+            sidePanel.printToLabel(topPanel.lastCommandResponse.getMessage(),
+                    topPanel.lastCommandResponse.getExitCode() == 0);
+        } else if (sender == sidePanel && event.equals("clearTableSelection")) {
+            tablePanel.clearSelection();
+        }
     }
 }

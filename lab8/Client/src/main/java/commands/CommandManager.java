@@ -28,6 +28,7 @@ public class CommandManager {
     private Supplier<String> valueGetter;
 
     private final HashSet<MyFile> fileHistory;
+    public volatile boolean isConnected = true;
 
 
     public CommandManager(Console console, Client client, String configFile) throws IOException {
@@ -72,20 +73,24 @@ public class CommandManager {
      * @param name command name
      * @param arg argument, given to command
      */
-    public CommandResponse runCommand(String name, String arg) {
+    synchronized public CommandResponse runCommand(String name, String arg) {
         CommandResponse cRes = new CommandResponse();
         try {
+            // offline mode
+            if (!isConnected && (arg == null || !arg.equals("force"))) {
+                throw new NoConnectionPendingException();
+            }
             Command command = getCommand(name);
             if (command == null) throw new CommandNotFindException("Command not found.");
             if (onlyAuthorized.get(name) && !client.isAuthorized()) {
                 throw new AuthorizationException("This command is allowed only for authorized users. " +
                         "(Try '/sign_in' or '/sign_up' to log in or create new account)");
             } else {
-                return getCommand(name).run(name, arg);
+                return command.run(name, arg);
             }
         } catch (NoConnectionPendingException e) {
             cRes.setExitCode(2);
-            cRes.setMessage("Server is not responding. Try to run command later.");
+            cRes.setMessage("noConnection");
         } catch (CommandNotFindException e) {
             cRes.setExitCode(5);
             cRes.setMessage("Command not found.");
@@ -293,8 +298,7 @@ public class CommandManager {
                 filePath = (String) new InputValidator(String.class, false)
                                     .validate(arg, null, true);
             } catch (ValidateException e) {
-                Console.println(e.getMessage());
-                throw new InvalidArgumentException();
+                throw new InvalidArgumentException(e.getMessage());
             }
 
             MyFile myFile = new MyFile(filePath);
@@ -304,6 +308,7 @@ public class CommandManager {
             Queue<String> q = FileManager.readCommandFile(filePath);
             offPrintMode(q);
 
+            CommandResponse lastCRes = new CommandResponse();
             while (q.peek() != null) {
                 String[] splitLine = q.poll().trim().split(" ");
 
@@ -315,12 +320,16 @@ public class CommandManager {
                 if (splitLine.length >= 2) {
                     newArg = splitLine[1];
                 }
-                runCommand(command, newArg);
+                lastCRes = runCommand(command, newArg);
+                if (lastCRes.getExitCode() != 0) break;
             }
 
             fileHistory.remove(myFile);
             setPrintMode();
-            return null;
+            if (lastCRes.getExitCode() != 0) {
+                return lastCRes;
+            }
+            return new CommandResponse("successfullyExec");
         });
 
         putCommand("add_if_min", true, "add movie if it oscars count lower that the other collection", (name, arg) -> {
@@ -339,12 +348,5 @@ public class CommandManager {
             int id = intValidator(arg);
             return getResponseFromServer(name, id);
         });
-    }
-
-    public PriorityQueue<Movie> getServerCollection() {
-        CommandResponse cRes = runCommand("$get");
-        @SuppressWarnings("unchecked")
-        PriorityQueue<Movie> pq = (PriorityQueue<Movie>) cRes.getObject();
-        return pq;
     }
 }
