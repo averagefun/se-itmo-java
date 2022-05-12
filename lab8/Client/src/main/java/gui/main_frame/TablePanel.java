@@ -1,6 +1,7 @@
 package gui.main_frame;
 
 import data.Movie;
+import gui.Localisable;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
@@ -12,7 +13,7 @@ import java.awt.*;
 import java.time.LocalDate;
 import java.util.*;
 
-public class TablePanel extends JPanel {
+public class TablePanel extends JPanel implements Localisable {
     protected JTable table;
     protected DefaultTableModel tableModel;
 
@@ -109,5 +110,9 @@ public class TablePanel extends JPanel {
 
     public void clearSelection() {
         table.clearSelection();
+    }
+
+    public void updateLabels() {
+
     }
 }

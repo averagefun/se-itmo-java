@@ -6,7 +6,7 @@ import localization.MyLocale;
 
 import javax.swing.*;
 
-public abstract class AbstractFrame extends JFrame {
+public abstract class AbstractFrame extends JFrame implements Localisable {
     protected final CommandManager cm;
 
     public final static MyBundle bundle = MyBundle.getBundle("gui");
@@ -16,7 +16,7 @@ public abstract class AbstractFrame extends JFrame {
         this.cm = cm;
     }
 
-    protected abstract void updateLabels();
+    public abstract void updateLabels();
 
     protected void initMenuItems() {
         JMenuItem ru_item = new JMenuItem("Русский");

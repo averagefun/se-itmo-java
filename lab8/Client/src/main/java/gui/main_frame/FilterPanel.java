@@ -4,6 +4,7 @@ import commands.CommandManager;
 import data.Movie;
 import data.MovieGenre;
 import data.MpaaRating;
+import gui.Localisable;
 import gui.addition.FilterListener;
 import localization.MyBundle;
 import network.CommandResponse;
@@ -15,7 +16,7 @@ import java.awt.event.KeyEvent;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class FilterPanel extends JPanel {
+public class FilterPanel extends JPanel implements Localisable {
     private final MyBundle bundle = MyBundle.getBundle("gui");
 
     private final CommandManager cm;
@@ -36,6 +37,19 @@ public class FilterPanel extends JPanel {
 
     private final JButton dropFiltersButton = new JButton(bundle.getString("dropFiltersButton"));
     protected Thread refresher;
+
+    public void updateLabels() {
+        DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>(
+                MovieGenre.getStringValues(bundle.getString("any")));
+        genreFilter.setModel(model);
+        model = new DefaultComboBoxModel<>(
+                MpaaRating.getStringValues(bundle.getString("any")));
+        ratingFilter.setModel(model);
+        model = new DefaultComboBoxModel<>(
+                new String[]{bundle.getString("any"), "0","1","2","3","4","5","6","7","8","9","10","11"});
+        oscarsFilter.setModel(model);
+        dropFiltersButton.setText(bundle.getString("dropFiltersButton"));
+    }
 
     private void addTextFilter(JTextField filter) {
         filter.setMinimumSize(new Dimension(100, 30));

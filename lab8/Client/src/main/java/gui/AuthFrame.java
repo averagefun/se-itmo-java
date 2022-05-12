@@ -79,7 +79,7 @@ public class AuthFrame extends AbstractFrame {
         addListeners();
     }
 
-    protected void updateLabels() {
+    public void updateLabels() {
         setTitle(bundle.getString("titleAuth"));
 
         language.setText(bundle.getString("language"));
@@ -105,6 +105,8 @@ public class AuthFrame extends AbstractFrame {
 
     private void initElements() {
         initMenuItems();
+
+        setIconImage(new ImageIcon("Client/src/main/java/gui/static/netflix.png").getImage());
 
         usernameLabel.setHorizontalAlignment(SwingConstants.CENTER);
         passwordLabel.setHorizontalAlignment(SwingConstants.CENTER);

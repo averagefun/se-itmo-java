@@ -3,6 +3,7 @@ package gui.main_frame;
 import commands.CommandManager;
 import data.MovieGenre;
 import data.MpaaRating;
+import gui.Localisable;
 import gui.addition.MyLayout;
 import gui.addition.MyStyle;
 import gui.addition.IndentedRenderer;
@@ -20,7 +21,7 @@ import java.util.Objects;
 import java.util.Queue;
 import java.util.function.Supplier;
 
-public class SidePanel extends JPanel {
+public class SidePanel extends JPanel implements Localisable {
     private final MyBundle bundle = MyBundle.getBundle("gui");
     private final String username;
 
@@ -58,6 +59,25 @@ public class SidePanel extends JPanel {
     private final JButton updateButton = new JButton(bundle.getString("updateButton"));
     private final JButton removeButton = new JButton(bundle.getString("removeButton"));
 
+    public void updateLabels() {
+        statusLabel.setText(bundle.getString("statusAdd") + ":");
+        idLabel.setText(bundle.getString("id") + ":");
+        authorLabel.setText(bundle.getString("author") + ":");
+        nameLabel.setText(bundle.getString("name") + ":");
+        creationDateLabel.setText(bundle.getString("creationDate") + ":");
+        oscarsLabel.setText(bundle.getString("oscars") + ":");
+        genreLabel.setText(bundle.getString("genre") + ":");
+        ratingLabel.setText(bundle.getString("rating") + ":");
+        xLabel.setText(bundle.getString("x") + ":");
+        yLabel.setText(bundle.getString("y") + ":");
+
+        // Buttons
+        addButton.setText(bundle.getString("addButton"));
+        toAddButton.setText(bundle.getString("toAddButton"));
+        updateButton.setText(bundle.getString("updateButton"));
+        removeButton.setText(bundle.getString("removeButton"));
+    }
+
     public SidePanel(String username, Mediator mediator) {
         this.username = username;
         this.cm = mediator.getCommandManager();
@@ -68,7 +88,6 @@ public class SidePanel extends JPanel {
     }
 
     private void initElements() {
-
         // set font
         Font font = new Font("Arial", Font.PLAIN, 14);
         Font fontFields = new Font("Arial", Font.PLAIN, 15);

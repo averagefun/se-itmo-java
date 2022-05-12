@@ -1,12 +1,15 @@
 package gui.main_frame;
 
 import commands.CommandManager;
+import console.FileManager;
+import console.MyFile;
 import gui.AbstractFrame;
 import gui.AuthFrame;
 import gui.addition.MyLayout;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.File;
 
 public class MainFrame extends AbstractFrame implements Mediator {
     // Top Panel
@@ -30,6 +33,8 @@ public class MainFrame extends AbstractFrame implements Mediator {
 
     private void initElements() {
         initMenuItems();
+
+        setIconImage(new ImageIcon("Client/src/main/java/gui/static/netflix.png").getImage());
 
         JScrollPane scrollPane = new JScrollPane(tablePanel.table);
         JPanel tablePanel = new JPanel();
@@ -87,10 +92,14 @@ public class MainFrame extends AbstractFrame implements Mediator {
         addListeners();
     }
 
-    protected void updateLabels() {
-        // todo update all labels
-        setTitle(bundle.getString("titleMain"));
+    public void updateLabels() {
         language.setText(bundle.getString("language"));
+        filterPanel.updateLabels();
+        topPanel.updateLabels();
+        sidePanel.updateLabels();
+        tablePanel.updateLabels();
+
+        setTitle(bundle.getString("titleMain"));
     }
 
     private void addListeners() {
