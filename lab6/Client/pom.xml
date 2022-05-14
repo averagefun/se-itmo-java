@@ -32,7 +32,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>console.Client</mainClass>
+                            <mainClass>client.Client</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>

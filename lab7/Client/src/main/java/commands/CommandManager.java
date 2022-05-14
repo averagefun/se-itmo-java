@@ -1,5 +1,6 @@
 package commands;
 
+import client.Client;
 import console.*;
 import data.Movie;
 import exceptions.*;

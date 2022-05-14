@@ -26,47 +26,32 @@ public class Server {
     }
 
     private void receiveAndAnswer() throws IOException, ClassNotFoundException {
-            byte[] sizeArr = new byte[10];
-            DatagramPacket datagramPacket = new DatagramPacket(sizeArr, sizeArr.length);
-            datagramSocket.receive(datagramPacket);
-            int size = 0;
-            for (int i = 0; i < sizeArr.length; i++) {
-                size += sizeArr[i] * Math.pow(10, i);
-            }
+        byte[] receiveBuffer = new byte[10000];
+        DatagramPacket receiveDatagramPacket = new DatagramPacket(receiveBuffer, receiveBuffer.length);
+        datagramSocket.receive(receiveDatagramPacket);
 
-            byte[] buffer = new byte[size];
-            datagramPacket = new DatagramPacket(buffer, buffer.length);
-            datagramSocket.receive(datagramPacket);
+        InetAddress inetAddress = receiveDatagramPacket.getAddress();
+        int port = receiveDatagramPacket.getPort();
 
-            InetAddress inetAddress = datagramPacket.getAddress();
-            int port = datagramPacket.getPort();
+        log.info("received data from {}:{}", inetAddress, port);
 
-            log.info("received {} bytes of data from {}:{}", size, inetAddress, port);
+        ByteArrayInputStream bais = new ByteArrayInputStream(receiveBuffer);
+        ObjectInputStream ois = new ObjectInputStream(bais);
+        Object receivedObject = ois.readObject();
 
-            ByteArrayInputStream bais = new ByteArrayInputStream(buffer);
-            ObjectInputStream ois = new ObjectInputStream(bais);
+        // processing command
+        Object toSendObject = cm.runCommand((CommandPacket) receivedObject);
 
-            Object receive = ois.readObject();
-            Object objToSend = cm.runCommand((CommandPacket) receive);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ObjectOutputStream oos = new ObjectOutputStream(baos);
+        oos.writeObject(toSendObject);
+        byte[] sendBuffer = baos.toByteArray();
 
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ObjectOutputStream oos = new ObjectOutputStream(baos);
-            oos.writeObject(objToSend);
+        DatagramPacket sendDatagramPacket = new DatagramPacket(sendBuffer, sendBuffer.length,
+                inetAddress, port);
+        datagramSocket.send(sendDatagramPacket);
 
-            buffer = baos.toByteArray();
-            size = buffer.length;
-            sizeArr = new byte[10];
-            for (int i = 0; (i < 10) && (size > 0); i++) {
-                sizeArr[i] = (byte) (size % 10);
-                size /= 10;
-            }
-
-            datagramPacket = new DatagramPacket(sizeArr, sizeArr.length, inetAddress, port);
-            datagramSocket.send(datagramPacket);
-            datagramPacket = new DatagramPacket(buffer, buffer.length, inetAddress, port);
-            datagramSocket.send(datagramPacket);
-
-            log.info("send {} bytes of data to {}:{}", buffer.length, inetAddress, port);
+        log.info("send {} bytes of data to {}:{}", sendBuffer.length, inetAddress, port);
     }
     
     public void start() {
