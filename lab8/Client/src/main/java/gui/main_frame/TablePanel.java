@@ -14,13 +14,20 @@ import java.time.LocalDate;
 import java.util.*;
 
 public class TablePanel extends JPanel implements Localisable {
-    protected JTable table;
-    protected DefaultTableModel tableModel;
+    private JTable table;
+    private DefaultTableModel tableModel;
+
+    private final Mediator mediator;
+
+    public JTable getTable() {
+        return table;
+    }
 
     private void initElements() {
         Font tableFont = new Font("Arial", Font.PLAIN, 14);
         table.setFont(tableFont);
         table.setRowHeight(20);
+        addSorter();
     }
 
     private void makeLayout() {
@@ -28,7 +35,14 @@ public class TablePanel extends JPanel implements Localisable {
                 "Id", "Author", "Name", "Creation Date", "Genre", "Rating", "Oscars", "X", "Y"
         };
 
-        tableModel = new MyTableModel();
+        tableModel = new DefaultTableModel() {
+            private static final long serialVersionUID = 5252895839257527196L;
+
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
         tableModel.setColumnIdentifiers(columns);
         table = new JTable(tableModel);
         table.setAutoCreateRowSorter(true);
@@ -44,9 +58,6 @@ public class TablePanel extends JPanel implements Localisable {
             table.getColumnModel().getColumn(i).setPreferredWidth(127);
             table.getColumnModel().getColumn(i).setMaxWidth(150);
         }
-
-        initElements();
-        addSorter();
     }
 
     private void addSorter() {
@@ -79,8 +90,19 @@ public class TablePanel extends JPanel implements Localisable {
         sorter.addRowSorterListener(event -> clearSelection());
     }
 
-    public TablePanel() {
+    private void addListeners() {
+        table.getSelectionModel().addListSelectionListener(event -> {
+            if (!table.getSelectionModel().isSelectionEmpty()) {
+                new Thread(() -> mediator.notify(this, "rowSelected")).start();
+            }
+        });
+    }
+
+    public TablePanel(Mediator mediator) {
+        this.mediator = mediator;
         makeLayout();
+        initElements();
+        addListeners();
     }
 
     private void addRowToTable(Movie m) {
@@ -90,8 +112,8 @@ public class TablePanel extends JPanel implements Localisable {
         });
     }
 
-    protected Map<String, Object> getTableRow(int index) {
-        int newIndex = table.getRowSorter().convertRowIndexToModel(index);
+    protected Map<String, Object> getSelectedRow() {
+        int newIndex = table.getRowSorter().convertRowIndexToModel(table.getSelectedRow());
         int columnCount = table.getModel().getColumnCount();
         Map<String, Object> rowStringValues = new HashMap<>(columnCount);
         for (int i=0; i < columnCount; i++) {

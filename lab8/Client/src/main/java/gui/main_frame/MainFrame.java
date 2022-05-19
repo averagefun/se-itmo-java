@@ -1,15 +1,14 @@
 package gui.main_frame;
 
 import commands.CommandManager;
-import console.FileManager;
-import console.MyFile;
 import gui.AbstractFrame;
 import gui.AuthFrame;
+import gui.addition.ImageManager;
 import gui.addition.MyLayout;
+import gui.main_frame.graphics.GraphicsPanel;
 
 import javax.swing.*;
 import java.awt.*;
-import java.io.File;
 
 public class MainFrame extends AbstractFrame implements Mediator {
     // Top Panel
@@ -22,39 +21,32 @@ public class MainFrame extends AbstractFrame implements Mediator {
     // Table Panel
     private final TablePanel tablePanel;
     // Graphics Panel
-    private final JPanel graphicsPanel = new JPanel();
+    private final GraphicsPanel graphicsPanel;
     // Table & Graphics
     private final JPanel tableGraphicsPanelsWrapper = new JPanel();
 
     // Filter Panel
     private final FilterPanel filterPanel;
+
+    // Tabbed Pane
+    private final JTabbedPane tabbedPane = new JTabbedPane();
+
     // TableGraphics Panel & Filter Panel
     private final JPanel tableGraphicsFilterPanelsWrapper = new JPanel();
 
     private void initElements() {
         initMenuItems();
 
-        setIconImage(new ImageIcon("Client/src/main/java/gui/static/netflix.png").getImage());
-
-        JScrollPane scrollPane = new JScrollPane(tablePanel.table);
-        JPanel tablePanel = new JPanel();
-        tablePanel.setLayout(new BorderLayout());
-
-        graphicsPanel.setLayout(null);
-
-        tableGraphicsPanelsWrapper.setLayout(new BorderLayout());
-        Font font3 = new Font("Verdana", Font.PLAIN, 12);
-        JTabbedPane tabbedPane = new JTabbedPane();
-        tabbedPane.setFont(font3);
-        JLabel tableP = new JLabel(bundle.getString("table"));
-        tabbedPane.addTab(tableP.getText(), scrollPane);
-        JLabel graphics = new JLabel(bundle.getString("graphics"));
-        tabbedPane.addTab(graphics.getText(), graphicsPanel);
-        tableGraphicsPanelsWrapper.add(tabbedPane, BorderLayout.CENTER);
+        setIconImage(ImageManager.getImage("netflix.png"));
     }
 
     private void makeLayout() {
-        initElements();
+        graphicsPanel.setLayout(null);
+
+        tableGraphicsPanelsWrapper.setLayout(new BorderLayout());
+        tabbedPane.addTab(bundle.getString("tableTabLabel"), new JScrollPane(tablePanel.getTable()));
+        tabbedPane.addTab(bundle.getString("graphicsTabLabel"), graphicsPanel);
+        tableGraphicsPanelsWrapper.add(tabbedPane, BorderLayout.CENTER);
 
         tableGraphicsFilterPanelsWrapper.setLayout(new BorderLayout());
         tableGraphicsFilterPanelsWrapper.add(tableGraphicsPanelsWrapper, BorderLayout.CENTER);
@@ -84,34 +76,26 @@ public class MainFrame extends AbstractFrame implements Mediator {
         super(cm);
 
         this.topPanel = new TopPanel(username, this);
-        this.tablePanel = new TablePanel();
+        this.tablePanel = new TablePanel(this);
+        this.graphicsPanel = new GraphicsPanel(this);
         this.filterPanel = new FilterPanel(this);
         this.sidePanel = new SidePanel(username, this);
 
+        initElements();
         makeLayout();
-        addListeners();
     }
 
     public void updateLabels() {
         language.setText(bundle.getString("language"));
+        tabbedPane.setTitleAt(0, bundle.getString("tableTabLabel"));
+        tabbedPane.setTitleAt(1, bundle.getString("graphicsTabLabel"));
+
         filterPanel.updateLabels();
         topPanel.updateLabels();
         sidePanel.updateLabels();
         tablePanel.updateLabels();
 
         setTitle(bundle.getString("titleMain"));
-    }
-
-    private void addListeners() {
-        tablePanel.table.getSelectionModel().addListSelectionListener(event -> {
-            if (!tablePanel.table.getSelectionModel().isSelectionEmpty()) {
-                new Thread(() -> {
-                    int index = tablePanel.table.getSelectedRow();
-                    sidePanel.setFields(tablePanel.getTableRow(index));
-                    sidePanel.clearPrintLabel();
-                }).start();
-            }
-        });
     }
 
     public CommandManager getCommandManager() {
@@ -144,7 +128,8 @@ public class MainFrame extends AbstractFrame implements Mediator {
                     }
                     break;
                 case "filtersApplied":
-                    tablePanel.refresh(filterPanel.filteredQueue);
+                    tablePanel.refresh(filterPanel.getFilteredQueue());
+                    graphicsPanel.refresh(filterPanel.getFilteredQueue());
                     break;
                 case "noConnection":
                     cm.isConnected = false;
@@ -152,9 +137,19 @@ public class MainFrame extends AbstractFrame implements Mediator {
                     break;
             }
         } else if (sender == topPanel && event.equals("printToLabel")) {
-            sidePanel.printToLabel(topPanel.lastCommandResponse.getMessage(),
+            sidePanel.updatePrintLabel(topPanel.lastCommandResponse.getMessage(),
                     topPanel.lastCommandResponse.getExitCode() == 0);
         } else if (sender == sidePanel && event.equals("clearTableSelection")) {
+            tablePanel.clearSelection();
+        } else if (sender == tablePanel && event.equals("rowSelected")) {
+            assert sidePanel != null;
+            sidePanel.setFields(tablePanel.getSelectedRow());
+            sidePanel.clearPrintLabel();
+        } else if (sender == graphicsPanel && event.equals("graphicsSelected")) {
+            assert sidePanel != null;
+            assert graphicsPanel != null;
+            sidePanel.setFields(graphicsPanel.getSelectedGraphics());
+            sidePanel.clearPrintLabel();
             tablePanel.clearSelection();
         }
     }

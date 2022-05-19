@@ -29,7 +29,9 @@ public class SidePanel extends JPanel implements Localisable {
     private final Mediator mediator;
 
     // labels
-    private final JLabel statusLabel = new JLabel(bundle.getString("statusAdd") + ":");
+    private String statusLabelBundle = "statusAdd";
+    private final JLabel statusLabel = new JLabel(bundle.getString(statusLabelBundle));
+
     private final JLabel idLabel = new JLabel(bundle.getString("id") + ":");
     private final JLabel authorLabel = new JLabel(bundle.getString("author") + ":");
     private final JLabel nameLabel = new JLabel(bundle.getString("name") + ":");
@@ -41,6 +43,7 @@ public class SidePanel extends JPanel implements Localisable {
     private final JLabel yLabel = new JLabel(bundle.getString("y") + ":");
     private final JPanel updateRemoveButtonPanel = new JPanel();
     private final JLabel printLabel = new JLabel();
+    private Supplier<String> printSupplier;
 
     // fields
     private final JTextField idField = new JTextField();
@@ -60,7 +63,7 @@ public class SidePanel extends JPanel implements Localisable {
     private final JButton removeButton = new JButton(bundle.getString("removeButton"));
 
     public void updateLabels() {
-        statusLabel.setText(bundle.getString("statusAdd") + ":");
+        statusLabel.setText(bundle.getString(statusLabelBundle));
         idLabel.setText(bundle.getString("id") + ":");
         authorLabel.setText(bundle.getString("author") + ":");
         nameLabel.setText(bundle.getString("name") + ":");
@@ -71,17 +74,26 @@ public class SidePanel extends JPanel implements Localisable {
         xLabel.setText(bundle.getString("x") + ":");
         yLabel.setText(bundle.getString("y") + ":");
 
+        if (statusLabelBundle.equals("statusAdd")) {
+            idField.setText(bundle.getString("notToFill"));
+            creationDateField.setText(bundle.getString("notToFill"));
+        }
+
         // Buttons
         addButton.setText(bundle.getString("addButton"));
         toAddButton.setText(bundle.getString("toAddButton"));
         updateButton.setText(bundle.getString("updateButton"));
         removeButton.setText(bundle.getString("removeButton"));
+
+        // Print label
+        updatePrintLabel();
     }
 
     public SidePanel(String username, Mediator mediator) {
         this.username = username;
         this.cm = mediator.getCommandManager();
         this.mediator = mediator;
+        initElements();
         makeLayout();
         addListeners();
         setAddMode();
@@ -134,8 +146,6 @@ public class SidePanel extends JPanel implements Localisable {
     }
 
     private void makeLayout() {
-        initElements();
-
         statusLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JPanel idPanel = createLabelFieldPanel(idLabel, idField);
@@ -218,7 +228,7 @@ public class SidePanel extends JPanel implements Localisable {
         cm.setInputValues(input);
         CommandResponse cRes = supplier.get();
         if (cRes.getExitCode() == 0) {
-            printToLabel(cRes.getMessage(), true);
+            updatePrintLabel(cRes.getMessage(), true);
         } else {
             String message = cRes.getMessage();
             if (message.contains("::")) {
@@ -227,25 +237,33 @@ public class SidePanel extends JPanel implements Localisable {
                 String errorText = bundle.getString(splitMessage[1]).isEmpty() ? splitMessage[1] : bundle.getString(splitMessage[1]);
                 message = fieldName + ": " + errorText.substring(0,1).toLowerCase() + errorText.substring(1);
             }
-            printToLabel(message, false);
+            updatePrintLabel(message, false);
         }
         return cRes;
     }
 
-    protected void clearPrintLabel() {
-        printLabel.setText("");
+    protected void updatePrintLabel() {
+        String htmlWrapLines = "<html><body style='width: %1spx'>%1s";
+        printLabel.setText(String.format(htmlWrapLines, 250, printSupplier.get()));
     }
 
-    protected void printToLabel(String message, boolean isSuccess) {
+    protected void updatePrintLabel(String message) {
+        printSupplier = () -> bundle.getString(message).isEmpty() ? message : bundle.getString(message);
+        updatePrintLabel();
+    }
+
+    protected void updatePrintLabel(String message, boolean isSuccess) {
         if (isSuccess) {
             printLabel.setForeground(Color.GREEN);
         } else {
             printLabel.setForeground(Color.RED);
         }
 
-        String bundleMessage = bundle.getString(message).isEmpty() ? message : bundle.getString(message);
-        String htmlWrapLines = "<html><body style='width: %1spx'>%1s";
-        printLabel.setText(String.format(htmlWrapLines, 250, bundleMessage));
+        updatePrintLabel(message);
+    }
+
+    protected void clearPrintLabel() {
+        updatePrintLabel("");
     }
 
     protected void setEnabledButtons(boolean b) {
@@ -276,7 +294,7 @@ public class SidePanel extends JPanel implements Localisable {
         removeButton.addActionListener(event -> new Thread(() -> {
             mediator.notify(this, "disableButtons");
             CommandResponse cRes = cm.runCommand("remove_by_id", idField.getText());
-            printToLabel(cRes.getMessage(), cRes.getExitCode() == 0);
+            updatePrintLabel(cRes.getMessage(), cRes.getExitCode() == 0);
             if (cRes.getExitCode() == 0) {
                 setAddMode();
             }
@@ -288,7 +306,6 @@ public class SidePanel extends JPanel implements Localisable {
                 char c = e.getKeyChar();
                 if (!
                         ((c >= '0' && c <= '9') ||
-                        (c == '-' && !xField.getText().contains("-")) ||
                         (c == '.' && !xField.getText().isEmpty() && !xField.getText().contains(".")) ||
                         (c == KeyEvent.VK_BACK_SPACE))
                 ){
@@ -303,7 +320,6 @@ public class SidePanel extends JPanel implements Localisable {
                 char c = e.getKeyChar();
                 if (!
                         ((c >= '0' && c <= '9') ||
-                        (c == '-' && !yField.getText().contains("-")) ||
                         (c == KeyEvent.VK_BACK_SPACE))
                 ){
                     e.consume();  // if it's not a digit or '-', ignore the event
@@ -334,12 +350,13 @@ public class SidePanel extends JPanel implements Localisable {
         toAddButton.setVisible(true);
         if (author.equals(username)) {
             setEditableFields(true);
-            statusLabel.setText(bundle.getString("statusUpdate"));
+            statusLabelBundle = "statusUpdate";
             updateRemoveButtonPanel.setVisible(true);
         } else {
-            statusLabel.setText(bundle.getString("statusView"));
+            statusLabelBundle = "statusView";
             updateRemoveButtonPanel.setVisible(false);
         }
+        statusLabel.setText(bundle.getString(statusLabelBundle));
     }
 
     private void setEditableFields(boolean b) {
@@ -374,7 +391,10 @@ public class SidePanel extends JPanel implements Localisable {
     private void setAddMode() {
         mediator.notify(this, "clearTableSelection");
         clearFields();
-        statusLabel.setText(bundle.getString("statusAdd"));
+        statusLabelBundle = "statusAdd";
+        statusLabel.setText(bundle.getString(statusLabelBundle));
+        idField.setText(bundle.getString("notToFill"));
+        creationDateField.setText(bundle.getString("notToFill"));
         toAddButton.setVisible(false);
         updateRemoveButtonPanel.setVisible(false);
         addButton.setVisible(true);

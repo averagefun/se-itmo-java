@@ -21,7 +21,7 @@ public class FilterPanel extends JPanel implements Localisable {
 
     private final CommandManager cm;
     private final Mediator mediator;
-    protected PriorityQueue<Movie> filteredQueue = new PriorityQueue<>();
+    private PriorityQueue<Movie> filteredQueue = new PriorityQueue<>();
     private PriorityQueue<Movie> cachedCollection = new PriorityQueue<>();
 
     private final JTextField idFilter = new JTextField();
@@ -169,5 +169,9 @@ public class FilterPanel extends JPanel implements Localisable {
                     .collect(Collectors.toCollection(PriorityQueue<Movie>::new));
         }
         mediator.notify(this, "filtersApplied");
+    }
+
+    public PriorityQueue<Movie> getFilteredQueue() {
+        return new PriorityQueue<>(filteredQueue);
     }
 }

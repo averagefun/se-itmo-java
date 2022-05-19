@@ -1,6 +1,7 @@
 package gui;
 
 import commands.CommandManager;
+import gui.addition.ImageManager;
 import gui.main_frame.MainFrame;
 import network.CommandResponse;
 
@@ -21,8 +22,6 @@ public class AuthFrame extends AbstractFrame {
     private final JButton signUpButton = new JButton(bundle.getString("signUpButton"));
 
     private void makeLayout() {
-        initElements();
-
         setLayout(new GridBagLayout());
         GridBagConstraints c = new GridBagConstraints();
         c.insets = new Insets(5, 2, 5, 2);
@@ -75,6 +74,7 @@ public class AuthFrame extends AbstractFrame {
 
     public AuthFrame(CommandManager cm) {
         super(cm);
+        initElements();
         makeLayout();
         addListeners();
     }
@@ -106,7 +106,7 @@ public class AuthFrame extends AbstractFrame {
     private void initElements() {
         initMenuItems();
 
-        setIconImage(new ImageIcon("Client/src/main/java/gui/static/netflix.png").getImage());
+        setIconImage(ImageManager.getImage("netflix.png"));
 
         usernameLabel.setHorizontalAlignment(SwingConstants.CENTER);
         passwordLabel.setHorizontalAlignment(SwingConstants.CENTER);
