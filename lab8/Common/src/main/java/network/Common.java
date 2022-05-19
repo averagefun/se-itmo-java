@@ -21,11 +21,11 @@ public class Common {
                 .processInput("movieName", printMode, valueGetter);
 
         Console.println("Type coordinates:", printMode);
-        Float x = (Float) new InputValidator(Float.class, false, -1, Integer.MAX_VALUE)
+        Float x = (Float) new InputValidator(Float.class, false, -1, 10001)
                 .loadPreviousValue(updMode, updMode ? movie.getCoordinates().getX() : null)
                 .processInput("x (float)", printMode, valueGetter);
 
-        long y = (long) new InputValidator(long.class, false, -1, Integer.MAX_VALUE)
+        long y = (long) new InputValidator(long.class, false, -1, 10001)
                 .loadPreviousValue(updMode, updMode ? movie.getCoordinates().getY() : null)
                 .processInput("y (long > -863)", printMode, valueGetter);
         Coordinates coordinates = new Coordinates(x,y);

@@ -244,7 +244,8 @@ public class SidePanel extends JPanel implements Localisable {
 
     protected void updatePrintLabel() {
         String htmlWrapLines = "<html><body style='width: %1spx'>%1s";
-        printLabel.setText(String.format(htmlWrapLines, 250, printSupplier.get()));
+        if (printSupplier.get() != null)
+            printLabel.setText(String.format(htmlWrapLines, 250, printSupplier.get()));
     }
 
     protected void updatePrintLabel(String message) {
