@@ -128,7 +128,7 @@ public class AuthFrame extends AbstractFrame {
             case 0:
                 // SUCCESS -> close AUTH FRAME, open MAIN FRAME
                 dispose();
-                new MainFrame(usernameField.getText(), cm);
+                SwingUtilities.invokeLater(() -> new MainFrame(usernameField.getText(), cm));
                 break;
             case 2:
                 setAuthErrorLabel("noConnection");

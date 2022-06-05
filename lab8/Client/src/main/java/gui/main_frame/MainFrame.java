@@ -9,6 +9,8 @@ import gui.main_frame.graphics.GraphicsPanel;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 
 public class MainFrame extends AbstractFrame implements Mediator {
     // Top Panel
@@ -72,6 +74,14 @@ public class MainFrame extends AbstractFrame implements Mediator {
         setVisible(true);
     }
 
+    private void addListeners() {
+        addComponentListener(new ComponentAdapter() {
+            public void componentResized(ComponentEvent componentEvent) {
+                graphicsPanel.refresh(filterPanel.getFilteredQueue());
+            }
+        });
+    }
+
     public MainFrame(String username, CommandManager cm) {
         super(cm);
 
@@ -83,6 +93,7 @@ public class MainFrame extends AbstractFrame implements Mediator {
 
         initElements();
         makeLayout();
+        addListeners();
     }
 
     public void updateLabels() {

@@ -7,6 +7,7 @@ import gui.AuthFrame;
 import network.CommandResponse;
 import network.Common;
 
+import javax.swing.*;
 import java.io.*;
 import java.net.*;
 import java.nio.ByteBuffer;
@@ -120,7 +121,7 @@ public class Client {
     }
 
     public void guiMode(CommandManager cm) {
-        new AuthFrame(cm);
+        SwingUtilities.invokeLater(() -> new AuthFrame(cm));
     }
 
     public static void main(String[] args) throws IOException {

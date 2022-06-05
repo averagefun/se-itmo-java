@@ -7,16 +7,14 @@ import org.jetbrains.annotations.NotNull;
 import javax.swing.*;
 import java.awt.*;
 import java.util.*;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class GraphicsPanel extends JPanel {
-    private final ExecutorService graphicsPool = Executors.newFixedThreadPool(100);
+    private ExecutorService graphicsPool;
     private final Mediator mediator;
 
     private volatile Movie selectedMovie;
-    private final List<MovieGraphics> cachedGraphics = new ArrayList<>();
 
     public GraphicsPanel(Mediator mediator) {
         this.mediator = mediator;
@@ -37,14 +35,19 @@ public class GraphicsPanel extends JPanel {
     }
 
     public void refresh(@NotNull PriorityQueue<Movie> pq) {
-        Dimension graphicsPanelSize = new Dimension(getWidth(), getHeight());
+        Dimension graphicsPanelSize = new Dimension(getVisibleRect().width, getVisibleRect().height);
 
-        cachedGraphics.clear();
+        if (graphicsPool != null && !graphicsPool.isShutdown()) {
+            graphicsPool.shutdown();
+        }
+        graphicsPool = Executors.newFixedThreadPool(100);
+
         removeAll();
+        repaint();
+        revalidate();
         pq.forEach(
                 movie -> graphicsPool.execute(() -> {
                     MovieGraphics mg = new MovieGraphics(movie, graphicsPanelSize);
-                    cachedGraphics.add(mg);
                     add(mg);
 
                     mg.addActionListener(event -> {

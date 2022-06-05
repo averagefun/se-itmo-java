@@ -92,7 +92,8 @@ public class FilterPanel extends JPanel implements Localisable {
     }
 
     private void addListeners() {
-        dropFiltersButton.addActionListener(event -> new Thread(() -> {
+        dropFiltersButton.addActionListener(event -> {
+            dropFiltersButton.setEnabled(false);
             idFilter.setText("");
             authorFilter.setText("");
             nameFilter.setText("");
@@ -100,7 +101,8 @@ public class FilterPanel extends JPanel implements Localisable {
             genreFilter.setSelectedIndex(0);
             ratingFilter.setSelectedIndex(0);
             oscarsFilter.setSelectedIndex(0);
-        }).start());
+            dropFiltersButton.setEnabled(true);
+        });
 
         // integer value validator
         idFilter.addKeyListener(new KeyAdapter() {

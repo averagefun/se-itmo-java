@@ -233,11 +233,14 @@ public class SidePanel extends JPanel implements Localisable {
             String message = cRes.getMessage();
             if (message.contains("::")) {
                 String[] splitMessage = message.split("::");
-                String fieldName = bundle.getString(splitMessage[0]).isEmpty() ? splitMessage[0] : bundle.getString(splitMessage[0]);
-                String errorText = bundle.getString(splitMessage[1]).isEmpty() ? splitMessage[1] : bundle.getString(splitMessage[1]);
-                message = fieldName + ": " + errorText.substring(0,1).toLowerCase() + errorText.substring(1);
+                Supplier<String> fieldNameSupplier = () -> bundle.getString(splitMessage[0]).isEmpty() ? splitMessage[0] : bundle.getString(splitMessage[0]);
+                Supplier<String> errorTextSupplier = () -> bundle.getString(splitMessage[1]).isEmpty() ? splitMessage[1] : bundle.getString(splitMessage[1]);
+                printSupplier = () -> fieldNameSupplier.get() + ": " + errorTextSupplier.get().substring(0,1).toLowerCase() + errorTextSupplier.get().substring(1);
+                setPrintLabelColor(false);
+                updatePrintLabel();
+            } else {
+                updatePrintLabel(message, false);
             }
-            updatePrintLabel(message, false);
         }
         return cRes;
     }
@@ -253,13 +256,16 @@ public class SidePanel extends JPanel implements Localisable {
         updatePrintLabel();
     }
 
-    protected void updatePrintLabel(String message, boolean isSuccess) {
+    protected void setPrintLabelColor(boolean isSuccess) {
         if (isSuccess) {
-            printLabel.setForeground(Color.GREEN);
+            printLabel.setForeground(new Color(15, 213, 60));
         } else {
-            printLabel.setForeground(Color.RED);
+            printLabel.setForeground(new Color(225, 13, 13));
         }
+    }
 
+    protected void updatePrintLabel(String message, boolean isSuccess) {
+        setPrintLabelColor(isSuccess);
         updatePrintLabel(message);
     }
 
