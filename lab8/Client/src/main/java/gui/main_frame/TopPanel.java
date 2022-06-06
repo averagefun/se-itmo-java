@@ -10,6 +10,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.File;
 import java.net.URISyntaxException;
+import java.util.concurrent.ExecutionException;
 
 public class TopPanel extends JPanel implements Localisable {
     private final MyBundle bundle = MyBundle.getBundle("gui");
@@ -82,33 +83,70 @@ public class TopPanel extends JPanel implements Localisable {
     }
 
     private void addListeners() {
-        clearButton.addActionListener(event -> new Thread(() -> {
+        clearButton.addActionListener(event -> {
             mediator.notify(this, "disableButtons");
-            lastCommandResponse = cm.runCommand("clear");
-            mediator.notify(this, "printToLabel");
-            mediator.notify(this, "enableButtons");
-        }).start());
 
-        execScriptButton.addActionListener(event -> new Thread(() -> {
+            new SwingWorker<CommandResponse, Void>() {
+                @Override
+                protected CommandResponse doInBackground() {
+                    return cm.runCommand("clear");
+                }
+
+                @Override
+                protected void done() {
+                    try {
+                        lastCommandResponse = get();
+                    } catch (InterruptedException | ExecutionException ignored) {}
+                    finally {
+                        mediator.notify(TopPanel.this, "printToLabel");
+                        mediator.notify(TopPanel.this, "enableButtons");
+                    }
+                }
+            }.execute();
+        });
+
+        execScriptButton.addActionListener(event -> {
             mediator.notify(this, "disableButtons");
-            lastCommandResponse = cm.runCommand("execute_script", chosenFile.getAbsolutePath());
-            mediator.notify(this, "printToLabel");
-            mediator.notify(this, "enableButtons");
-        }).start());
 
-        fileChooseButton.addActionListener(event -> new Thread(() -> {
+            new SwingWorker<CommandResponse, Void>() {
+                @Override
+                protected CommandResponse doInBackground() {
+                    return cm.runCommand("execute_script", chosenFile.getAbsolutePath());
+                }
+
+                @Override
+                protected void done() {
+                    try {
+                        lastCommandResponse = get();
+                    } catch (InterruptedException | ExecutionException ignored) {}
+                    finally {
+                        mediator.notify(TopPanel.this, "printToLabel");
+                        mediator.notify(TopPanel.this, "enableButtons");
+                    }
+                }
+            }.execute();
+        });
+
+        fileChooseButton.addActionListener(event -> {
             int returnVal = fc.showOpenDialog(this);
             if (returnVal == JFileChooser.APPROVE_OPTION) {
                 chosenFile = fc.getSelectedFile();
                 fileChooseButton.setText(chosenFile.getName());
                 execScriptButton.setEnabled(true);
             }
-        }).start());
+        });
 
-        exitButton.addActionListener(event -> new Thread(() -> {
-            cm.runCommand("/sign_out");
-            mediator.notify(this, "signOut");
-        }).start());
+        exitButton.addActionListener(event -> new SwingWorker<CommandResponse, Void>() {
+            @Override
+            protected CommandResponse doInBackground() {
+                return cm.runCommand("/sign_out");
+            }
+
+            @Override
+            protected void done() {
+                mediator.notify(TopPanel.this, "signOut");
+            }
+        }.execute());
     }
 
     protected void setEnabledButtons(boolean b) {

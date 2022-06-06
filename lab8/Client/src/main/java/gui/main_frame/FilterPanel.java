@@ -10,10 +10,12 @@ import localization.MyBundle;
 import network.CommandResponse;
 
 import javax.swing.*;
+import javax.swing.Timer;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 public class FilterPanel extends JPanel implements Localisable {
@@ -36,7 +38,7 @@ public class FilterPanel extends JPanel implements Localisable {
             new String[]{bundle.getString("any"), "0","1","2","3","4","5","6","7","8","9","10","11"});
 
     private final JButton dropFiltersButton = new JButton(bundle.getString("dropFiltersButton"));
-    protected Thread refresher;
+    protected Timer refresher;
 
     public void updateLabels() {
         DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>(
@@ -125,52 +127,64 @@ public class FilterPanel extends JPanel implements Localisable {
     }
 
     public void createRefresher() {
-        refresher = new Thread(() -> {
-            while(true) {
-                CommandResponse cRes = cm.runCommand("$get", "force");
-                if (cRes.getExitCode() == 2) {
-                    mediator.notify(this, "noConnection");
-                } else if (cRes.getExitCode() == 0) {
-                    @SuppressWarnings("unchecked")
-                    PriorityQueue<Movie> pq = (PriorityQueue<Movie>) cRes.getObject();
-                    mediator.notify(this, "gotCollection");
-                    if (pq == null) {
-                        cachedCollection = new PriorityQueue<>();
-                        applyFilters();
-                    } else if (!new ArrayList<>(pq).equals(new ArrayList<>(cachedCollection))) {
-                        cachedCollection = pq;
-                        applyFilters();
-                    }
-                } try {
-                    //noinspection BusyWait
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    break;
-                }
+        refresher = new Timer(1000, e -> new SwingWorker<CommandResponse, Void>() {
+            @Override
+            protected CommandResponse doInBackground() {
+                return cm.runCommand("$get", "force");
             }
-        });
-        refresher.setDaemon(true);
+
+            @Override
+            protected void done() {
+                try {
+                    CommandResponse cRes = get();
+                    if (cRes.getExitCode() == 2) {
+                        mediator.notify(FilterPanel.this, "noConnection");
+                    } else if (cRes.getExitCode() == 0) {
+                        @SuppressWarnings("unchecked")
+                        PriorityQueue<Movie> pq = (PriorityQueue<Movie>) cRes.getObject();
+                        mediator.notify(FilterPanel.this, "gotCollection");
+                        if (pq == null) {
+                            cachedCollection = new PriorityQueue<>();
+                            applyFilters();
+                        } else if (!new ArrayList<>(pq).equals(new ArrayList<>(cachedCollection))) {
+                            cachedCollection = pq;
+                            applyFilters();
+                        }
+                    }
+                } catch (InterruptedException | ExecutionException ignored) {}
+            }
+        }.execute());
         refresher.start();
     }
 
     public void applyFilters() {
-        if (cachedCollection == null || cachedCollection.isEmpty()) {
-            filteredQueue = new PriorityQueue<>();
-        } else {
-            filteredQueue = cachedCollection.stream()
-                    .filter(movie -> idFilter.getText().isEmpty() || Integer.toString(movie.getId()).equals(idFilter.getText()))
-                    .filter(movie -> authorFilter.getText().isEmpty() || movie.getUsername().toLowerCase().startsWith(authorFilter.getText().toLowerCase()))
-                    .filter(movie -> nameFilter.getText().isEmpty() || movie.getName().toLowerCase().startsWith(nameFilter.getText().toLowerCase()))
-                    .filter(movie -> creationDateFilter.getText().isEmpty() || movie.getCreationDate().toString().equals(creationDateFilter.getText()))
-                    .filter(movie -> genreFilter.getSelectedItem() == bundle.getString("any") ||
-                            movie.getMovieGenre().toString().equalsIgnoreCase(Objects.requireNonNull(genreFilter.getSelectedItem()).toString()))
-                    .filter(movie -> ratingFilter.getSelectedItem() == bundle.getString("any") ||
-                            movie.getMpaaRating().toString().equalsIgnoreCase(Objects.requireNonNull(ratingFilter.getSelectedItem()).toString()))
-                    .filter(movie -> oscarsFilter.getSelectedItem() == bundle.getString("any") ||
-                            Integer.toString(movie.getOscarsCount()).equalsIgnoreCase(Objects.requireNonNull(oscarsFilter.getSelectedItem()).toString()))
-                    .collect(Collectors.toCollection(PriorityQueue<Movie>::new));
-        }
-        mediator.notify(this, "filtersApplied");
+        new SwingWorker<Void, Void>() {
+            @Override
+            protected Void doInBackground() {
+                if (cachedCollection == null || cachedCollection.isEmpty()) {
+                    filteredQueue = new PriorityQueue<>();
+                } else {
+                    filteredQueue = cachedCollection.stream()
+                            .filter(movie -> idFilter.getText().isEmpty() || Integer.toString(movie.getId()).equals(idFilter.getText()))
+                            .filter(movie -> authorFilter.getText().isEmpty() || movie.getUsername().toLowerCase().startsWith(authorFilter.getText().toLowerCase()))
+                            .filter(movie -> nameFilter.getText().isEmpty() || movie.getName().toLowerCase().startsWith(nameFilter.getText().toLowerCase()))
+                            .filter(movie -> creationDateFilter.getText().isEmpty() || movie.getCreationDate().toString().equals(creationDateFilter.getText()))
+                            .filter(movie -> genreFilter.getSelectedItem() == bundle.getString("any") ||
+                                    movie.getMovieGenre().toString().equalsIgnoreCase(Objects.requireNonNull(genreFilter.getSelectedItem()).toString()))
+                            .filter(movie -> ratingFilter.getSelectedItem() == bundle.getString("any") ||
+                                    movie.getMpaaRating().toString().equalsIgnoreCase(Objects.requireNonNull(ratingFilter.getSelectedItem()).toString()))
+                            .filter(movie -> oscarsFilter.getSelectedItem() == bundle.getString("any") ||
+                                    Integer.toString(movie.getOscarsCount()).equalsIgnoreCase(Objects.requireNonNull(oscarsFilter.getSelectedItem()).toString()))
+                            .collect(Collectors.toCollection(PriorityQueue<Movie>::new));
+                }
+                return null;
+            }
+
+            @Override
+            protected void done() {
+                mediator.notify(FilterPanel.this, "filtersApplied");
+            }
+        }.execute();
     }
 
     public PriorityQueue<Movie> getFilteredQueue() {

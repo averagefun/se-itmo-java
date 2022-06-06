@@ -8,6 +8,7 @@ import network.CommandResponse;
 import javax.swing.*;
 import java.awt.*;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 
 public class AuthFrame extends AbstractFrame {
     private final JLabel usernameLabel = new JLabel(bundle.getString("username"));
@@ -128,7 +129,7 @@ public class AuthFrame extends AbstractFrame {
             case 0:
                 // SUCCESS -> close AUTH FRAME, open MAIN FRAME
                 dispose();
-                SwingUtilities.invokeLater(() -> new MainFrame(usernameField.getText(), cm));
+                new MainFrame(usernameField.getText(), cm);
                 break;
             case 2:
                 setAuthErrorLabel("noConnection");
@@ -144,30 +145,54 @@ public class AuthFrame extends AbstractFrame {
     private void addListeners() {
         logInButton.addActionListener(event -> {
             activeAuthInterface(false);
-            new Thread(() -> {
-                Queue<String> input = new ArrayDeque<>();
-                input.add(usernameField.getText());
-                input.add(new String(passwordField.getPassword()));
-                cm.setInputValues(input);
-                CommandResponse response = cm.runCommand("/sign_in");
-                buttonCallback(response);
-                activeAuthInterface(true);
-            }).start();
+            Queue<String> input = new ArrayDeque<>();
+            input.add(usernameField.getText());
+            input.add(new String(passwordField.getPassword()));
+
+            new SwingWorker<CommandResponse, Void>() {
+                @Override
+                protected CommandResponse doInBackground() {
+                    cm.setInputValues(input);
+                    return cm.runCommand("/sign_in");
+                }
+
+                @Override
+                protected void done() {
+                    try {
+                        buttonCallback(get());
+                    } catch (InterruptedException | ExecutionException ignored) {}
+                    finally {
+                        activeAuthInterface(true);
+                    }
+                }
+            }.execute();
         });
 
         signUpButton.addActionListener(event -> {
             activeAuthInterface(false);
-            new Thread(() -> {
-                Queue<String> input = new ArrayDeque<>();
-                input.add(usernameField.getText());
-                String password = new String(passwordField.getPassword());
-                input.add(password);
-                input.add(password);
-                cm.setInputValues(input);
-                CommandResponse response = cm.runCommand("/sign_up");
-                buttonCallback(response);
-                activeAuthInterface(true);
-            }).start();
+            Queue<String> input = new ArrayDeque<>();
+            input.add(usernameField.getText());
+            String password = new String(passwordField.getPassword());
+            input.add(password);
+            input.add(password);
+
+            new SwingWorker<CommandResponse, Void>() {
+                @Override
+                protected CommandResponse doInBackground() {
+                    cm.setInputValues(input);
+                    return cm.runCommand("/sign_up");
+                }
+
+                @Override
+                protected void done() {
+                    try {
+                        buttonCallback(get());
+                    } catch (InterruptedException | ExecutionException ignored) {}
+                    finally {
+                        activeAuthInterface(true);
+                    }
+                }
+            }.execute();
         });
     }
 }

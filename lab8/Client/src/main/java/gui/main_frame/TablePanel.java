@@ -93,7 +93,7 @@ public class TablePanel extends JPanel implements Localisable {
     private void addListeners() {
         table.getSelectionModel().addListSelectionListener(event -> {
             if (!table.getSelectionModel().isSelectionEmpty()) {
-                new Thread(() -> mediator.notify(this, "rowSelected")).start();
+                mediator.notify(this, "rowSelected");
             }
         });
     }

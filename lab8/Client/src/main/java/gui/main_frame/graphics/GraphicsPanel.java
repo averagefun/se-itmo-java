@@ -5,16 +5,16 @@ import gui.main_frame.Mediator;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
+import javax.swing.Timer;
 import java.awt.*;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.List;
 
 public class GraphicsPanel extends JPanel {
-    private ExecutorService graphicsPool;
     private final Mediator mediator;
 
-    private volatile Movie selectedMovie;
+    private Movie selectedMovie;
+    private List<Timer> timers;
 
     public GraphicsPanel(Mediator mediator) {
         this.mediator = mediator;
@@ -37,36 +37,34 @@ public class GraphicsPanel extends JPanel {
     public void refresh(@NotNull PriorityQueue<Movie> pq) {
         Dimension graphicsPanelSize = new Dimension(getVisibleRect().width, getVisibleRect().height);
 
-        if (graphicsPool != null && !graphicsPool.isShutdown()) {
-            graphicsPool.shutdown();
+        if (timers != null) {
+            for (Timer timer: timers)
+                timer.stop();
+            timers.clear();
         }
-        graphicsPool = Executors.newFixedThreadPool(100);
-
         removeAll();
         repaint();
         revalidate();
+
+        timers = new ArrayList<>(pq.size());
         pq.forEach(
-                movie -> graphicsPool.execute(() -> {
+                movie -> {
                     MovieGraphics mg = new MovieGraphics(movie, graphicsPanelSize);
                     add(mg);
 
                     mg.addActionListener(event -> {
                         selectedMovie = movie;
-                        new Thread(() -> mediator.notify(this, "graphicsSelected")).start();
+                        mediator.notify(this, "graphicsSelected");
                     });
 
-                    while (true) {
-                        try {
-                            //noinspection BusyWait
-                            Thread.sleep(40); // 30-35 FPS
-                        } catch (InterruptedException e) {
-                            break;
-                        }
+                    Timer timer = new Timer(40, e -> {
                         mg.transitionStep();
                         repaint();
                         revalidate();
-                    }
-                })
+                    });
+                    timers.add(timer);
+                    timer.start();
+                }
         );
     }
 }

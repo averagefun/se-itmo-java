@@ -19,6 +19,7 @@ import java.util.ArrayDeque;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
 
 public class SidePanel extends JPanel implements Localisable {
@@ -281,14 +282,28 @@ public class SidePanel extends JPanel implements Localisable {
     }
 
     private void addListeners() {
-        addButton.addActionListener(event -> new Thread(() -> {
+        addButton.addActionListener(event -> {
             mediator.notify(this, "disableButtons");
-            CommandResponse cRes = updateServerCollectionByFieldsValues(() -> cm.runCommand("add"));
-            if (cRes.getExitCode() == 0) {
-                clearFields();
-            }
-            mediator.notify(this, "enableButtons");
-        }).start());
+
+            new SwingWorker<CommandResponse, Void>() {
+                @Override
+                protected CommandResponse doInBackground() {
+                    return updateServerCollectionByFieldsValues(() -> cm.runCommand("add"));
+                }
+
+                @Override
+                protected void done() {
+                    try {
+                        if (get().getExitCode() == 0) {
+                            clearFields();
+                        }
+                    } catch (InterruptedException | ExecutionException ignored) {}
+                    finally {
+                        mediator.notify(SidePanel.this, "enableButtons");
+                    }
+                }
+            }.execute();
+        });
 
         toAddButton.addActionListener(event -> new Thread(this::setAddMode).start());
 

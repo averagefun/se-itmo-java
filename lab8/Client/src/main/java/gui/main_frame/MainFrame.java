@@ -126,7 +126,7 @@ public class MainFrame extends AbstractFrame implements Mediator {
             sidePanel.setEnabledButtons(false);
             topPanel.setEnabledButtons(false);
         } else if (event.equals("signOut")) {
-            filterPanel.refresher.interrupt();
+            filterPanel.refresher.stop();
             dispose();
             new AuthFrame(cm);
         } else if (sender == filterPanel) {
