@@ -1,0 +1,28 @@
+[
+  {
+    "id": 8,
+    "name": "Titanic",
+    "coordinates": {
+      "x": 23.1,
+      "y": -862
+    },
+    "creationDate": {
+      "year": 2022,
+      "month": 3,
+      "day": 14
+    },
+    "oscarsCount": 2,
+    "movieGenre": "HORROR",
+    "mpaaRating": "G",
+    "director": {
+      "name": "Clown",
+      "weight": 87.1,
+      "hairColor": "RED",
+      "location": {
+        "x": 25.1,
+        "y": 96.4,
+        "name": "Russia"
+      }
+    }
+  }
+]

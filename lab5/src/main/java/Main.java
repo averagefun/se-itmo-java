@@ -6,8 +6,9 @@ import console.FileManager;
 import java.util.Scanner;
 
 public class Main {
+
+    // Lab5, variant 3117500
     public static void main(String[] args) {
-        // Lab5, variant 3117500
 
         printLogo();
         Scanner sc = new Scanner(System.in);

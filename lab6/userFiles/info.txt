@@ -1,3 +1,0 @@
-Lab6, var 3117500
-UDP, Server: Datagram, Client: DatagramChannel
-build project to jar with: 'mvn --projects Server,Client clean compile assembly:single', jar files can be found in target folders
