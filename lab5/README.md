@@ -2,10 +2,10 @@
 
 [Отчет](_task/lab5.docx)  
 [Перейти к Java коду](src/main/java)  
-В папке ___external__ находятся дополнительные файлы к проекту, такие как база данных,
+В папке __external__ находятся дополнительные файлы к проекту, такие как база данных,
 скрипты, необходимые для сдачи лабораторной работы.
 
 ### Задание
-![img_1.png](_task/img_1.png)
-![img_2.png](_task/img_2.png)
-![img_3.png](_task/img_3.png)
+![img_1.png](task/img_1.png)
+![img_2.png](task/img_2.png)
+![img_3.png](task/img_3.png)
