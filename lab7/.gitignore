@@ -3,7 +3,7 @@ lib/
 target/
 
 ~*.docx
-*.cfg
+secret.cfg
 config.json
 config_helios.json
 config.txt
